@@ -98,12 +98,18 @@ export const AdminDashboard: React.FC = () => {
 
   const handleRemoveClick = (productId: string) => {
     if (editingId === productId) resetForm();
-    removeProduct(productId).catch((err) => console.error('Failed to remove product', err));
+    removeProduct(productId).catch((err) => {
+      console.error('Failed to remove product', err);
+      window.alert('Could not remove product: ' + (err instanceof Error ? err.message : String(err)));
+    });
   };
 
   const handleRemoveOrderClick = (orderId: string) => {
     if (!window.confirm('Remove this order? This cannot be undone.')) return;
-    removeOrder(orderId).catch((err) => console.error('Failed to remove order', err));
+    removeOrder(orderId).catch((err) => {
+      console.error('Failed to remove order', err);
+      window.alert('Could not remove order: ' + (err instanceof Error ? err.message : String(err)));
+    });
   };
 
   const handleNextStep = (e: React.FormEvent) => {

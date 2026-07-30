@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { PlaceholderImage } from '../components/PlaceholderImage';
@@ -18,6 +18,7 @@ export const Checkout: React.FC = () => {
   const [proofPreview, setProofPreview] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
@@ -28,6 +29,12 @@ export const Checkout: React.FC = () => {
     const reader = new FileReader();
     reader.onload = () => setProofPreview(reader.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleRemoveProof = () => {
+    setProofFile(null);
+    setProofPreview('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,14 +173,24 @@ export const Checkout: React.FC = () => {
               Venmo Payment Screenshot
             </label>
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={handleFileChange}
               className="w-full text-sm text-bm-muted file:mr-4 file:py-2 file:px-4 file:border file:border-bm-border file:bg-bm-card file:text-xs file:uppercase file:tracking-wide"
-              required
+              required={!proofFile}
             />
             {proofPreview && (
-              <img src={proofPreview} alt="Payment proof preview" className="mt-3 w-32 border border-bm-border" />
+              <div className="mt-3 flex items-end gap-3">
+                <img src={proofPreview} alt="Payment proof preview" className="w-32 border border-bm-border" />
+                <button
+                  type="button"
+                  onClick={handleRemoveProof}
+                  className="text-[11px] uppercase tracking-wide text-bm-muted hover:text-rho-rose"
+                >
+                  Remove
+                </button>
+              </div>
             )}
           </div>
 

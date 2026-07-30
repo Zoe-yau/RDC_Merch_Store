@@ -142,8 +142,9 @@ export async function updateProduct(
 }
 
 export async function removeProduct(productId: string): Promise<void> {
-  const { error } = await supabase.from('products').delete().eq('id', productId);
+  const { data, error } = await supabase.from('products').delete().eq('id', productId).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Product was not deleted — it may no longer exist or you may lack permission.');
 }
 
 // ============================================================================
@@ -251,8 +252,9 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
 }
 
 export async function removeOrder(orderId: string): Promise<void> {
-  const { error } = await supabase.from('orders').delete().eq('id', orderId);
+  const { data, error } = await supabase.from('orders').delete().eq('id', orderId).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Order was not deleted — it may no longer exist or you may lack permission.');
 }
 
 // payment-proofs is a private bucket — admins view proofs via a short-lived
