@@ -52,9 +52,14 @@ toggle maintenance mode.
   authenticated admin account has write access to products, orders, and
   site settings via Row Level Security policies — see `supabase/schema.sql`.
 
+## Order receipt emails
+
+Submitting an order triggers a confirmation email via a Supabase Edge
+Function (`supabase/functions/send-order-receipt`), invoked by a database
+webhook on `orders` INSERT. See [`supabase/SETUP.md`](supabase/SETUP.md) for
+deployment steps (Resend account, secrets, webhook config).
+
 ## Out of scope
 
 - Real payment processing (Venmo screenshots are stored as proof only, never
   verified programmatically)
-- Receipt emails (a Supabase Edge Function triggered off the `orders` table
-  is the natural hook if this is added later)
