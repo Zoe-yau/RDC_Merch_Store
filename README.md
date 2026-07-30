@@ -54,12 +54,16 @@ orders, and toggle maintenance mode.
 
 ## Order receipt emails
 
-Submitting an order triggers a confirmation email via a Supabase Edge
-Function (`supabase/functions/send-order-receipt`), invoked by a database
-webhook on `orders` INSERT. See [`supabase/SETUP.md`](supabase/SETUP.md) for
-deployment steps (Resend account, secrets, webhook config).
+Submitting an order sends a confirmation email client-side via
+[EmailJS](https://emailjs.com), right after the order lands in Supabase. See
+[`supabase/SETUP.md`](supabase/SETUP.md) for the EmailJS account/template
+setup and required `.env` values. The send is non-blocking — if EmailJS
+fails, the order still completes and the failure is only logged to the
+console.
 
 ## Out of scope
 
 - Real payment processing (Venmo screenshots are stored as proof only, never
   verified programmatically)
+- Retrying failed receipt emails (logged, not retried — worth revisiting if
+  receipts turn out to be unreliable)

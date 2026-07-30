@@ -1,3 +1,4 @@
+import emailjs from '@emailjs/browser';
 import { supabase } from './supabaseClient';
 import type { ColorVariant, Member, Order, OrderItem, Product } from '../data/mockData';
 
@@ -214,7 +215,34 @@ export async function submitOrder(orderData: NewOrderData, paymentProofFile: Fil
   });
   if (error) throw error;
 
+  void sendOrderReceiptEmail(orderData, id);
+
   return { ...orderData, id, createdAt, status: 'pending', paymentProofPath: path };
+}
+
+// Best-effort receipt email — a failure here must never undo or block an
+// order that already landed in Supabase, so errors are swallowed and logged.
+async function sendOrderReceiptEmail(orderData: NewOrderData, orderId: string): Promise<void> {
+  const items = orderData.items
+    .map((item) => `${item.productName} (${item.size}, ${item.color}) x${item.quantity}`)
+    .join('\n');
+
+  try {
+    await emailjs.send(
+      import.meta.env.VITE_EMAILJS_SERVICE_ID,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+      {
+        buyer_name: orderData.buyerName,
+        email: orderData.email,
+        items,
+        total: orderData.total.toFixed(2),
+        order_id: orderId,
+      },
+      { publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY }
+    );
+  } catch (err) {
+    console.error('Failed to send order receipt email:', err);
+  }
 }
 
 export async function updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {

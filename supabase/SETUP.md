@@ -18,49 +18,35 @@
    ```
 6. `npm run dev`.
 
-## Order receipt emails
+## Order receipt emails (EmailJS)
 
-A confirmation email goes out automatically when an order is submitted, via
-a Supabase Edge Function (`supabase/functions/send-order-receipt`) triggered
-by a database webhook on `orders` INSERT. Setup:
+A confirmation email goes out automatically when an order is submitted, sent
+client-side via [EmailJS](https://emailjs.com) right after the Supabase
+insert succeeds. Setup:
 
-1. Install the [Supabase CLI](https://supabase.com/docs/guides/cli) and log
-   in / link it to your project:
+1. Sign up at [emailjs.com](https://emailjs.com).
+2. Email Services -> connect a Gmail (or Outlook) account — ideally a
+   dedicated chapter account rather than a personal one, since it'll be the
+   "from" address on every receipt.
+3. Email Templates -> create a template for order receipts using these
+   variables (names must match exactly): `{{buyer_name}}`, `{{email}}`,
+   `{{items}}`, `{{total}}`, `{{order_id}}`. Write the subject/body however
+   you'd like it to read to a buyer.
+4. Account -> API Keys -> note the Public Key, Service ID, and Template ID.
+5. Add them to your `.env` file at the repo root (see `.env.example`):
    ```
-   supabase login
-   supabase link --project-ref your-project-ref
+   VITE_EMAILJS_PUBLIC_KEY=...
+   VITE_EMAILJS_SERVICE_ID=...
+   VITE_EMAILJS_TEMPLATE_ID=...
    ```
-2. Create a [Resend](https://resend.com) account, verify a sending domain
-   (or use their sandbox domain, `onboarding@resend.dev`, for testing), and
-   grab an API key.
-3. Set the Edge Function secrets:
-   ```
-   supabase secrets set RESEND_API_KEY=re_your_key
-   supabase secrets set RECEIPT_FROM="Rho Delta Chi Shop <onboarding@resend.dev>"
-   supabase secrets set RECEIPT_REPLY_TO=RDC.BetaFundraisingChair@gmail.com
-   supabase secrets set WEBHOOK_SECRET=$(openssl rand -hex 32)
-   ```
-   `RECEIPT_REPLY_TO` is optional — set it so replies to the receipt land in
-   a real inbox even though `RECEIPT_FROM` is a Resend/sandbox address (you
-   can't send *as* a `gmail.com` address without owning that domain, but you
-   can set it as the reply-to).
-4. Deploy the function:
-   ```
-   supabase functions deploy send-order-receipt --no-verify-jwt
-   ```
-   (`--no-verify-jwt` is needed because the webhook calls it without a
-   Supabase user JWT; the function checks `WEBHOOK_SECRET` itself instead.)
-5. Dashboard -> Database -> Webhooks -> Create a new webhook:
-   - Table: `orders`, Events: `Insert`
-   - Type: HTTP Request -> POST to
-     `https://your-project-ref.supabase.co/functions/v1/send-order-receipt`
-   - Add an HTTP header: `x-webhook-secret` -> the same value you set for
-     `WEBHOOK_SECRET` above.
-6. Place a test order and confirm the email arrives. Check
-   Edge Functions -> Logs in the dashboard if it doesn't.
+6. Place a test order and confirm the email arrives. If it doesn't, check the
+   browser console — the send is non-blocking, so a failure logs an error
+   there but does not stop the order from completing.
 
 This only confirms the order was received — it is not payment confirmation
-(the fundraising chair still manually reviews the Venmo screenshot).
+(the fundraising chair still manually reviews the Venmo screenshot). Note:
+the free EmailJS tier caps out at 200 emails/month, and failed sends are not
+retried.
 
 ## Out of scope (by design)
 
@@ -68,3 +54,5 @@ This only confirms the order was received — it is not payment confirmation
   verified programmatically.
 - No separate backend server — the frontend talks to Supabase directly with
   the anon key; RLS policies are the only access control.
+- Retrying failed receipt emails, and EmailJS usage/rate tracking beyond the
+  free tier.
