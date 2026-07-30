@@ -2,9 +2,9 @@
 
 A private, invite-only merch storefront for the chapter. Members log in with
 their name (checked against the chapter roster), browse products, and check
-out by uploading a Venmo payment screenshot as proof of payment. Exec board
-members sign in separately to manage products, review/fulfill orders, and
-toggle maintenance mode.
+out by uploading a Venmo payment screenshot as proof of payment. The
+fundraising chair signs in separately to manage products, review/fulfill
+orders, and toggle maintenance mode.
 
 ## Stack
 

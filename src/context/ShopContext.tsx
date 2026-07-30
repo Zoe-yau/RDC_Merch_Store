@@ -30,6 +30,7 @@ interface ShopContextType {
   toggleMaintenanceMode: () => Promise<void>;
   submitOrder: (order: NewOrderData, paymentProofFile: File) => Promise<void>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
+  removeOrder: (orderId: string) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>, variantFiles: VariantFiles) => Promise<void>;
   updateProduct: (productId: string, product: Omit<Product, 'id'>, variantFiles: VariantFiles) => Promise<void>;
   removeProduct: (productId: string) => Promise<void>;
@@ -138,6 +139,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
   };
 
+  const removeOrder = async (orderId: string) => {
+    await api.removeOrder(orderId);
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+  };
+
   const addProduct = async (productData: Omit<Product, 'id'>, variantFiles: VariantFiles) => {
     await api.addProduct(productData, variantFiles);
     setProducts(await api.getProducts());
@@ -158,7 +164,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         products, orders, lastOrder, cart, currentUser, isAdminLoggedIn, isMaintenanceMode, productsLoading,
         addToCart, removeFromCart, updateCartQuantity, clearCart, checkMember,
-        adminLogin, logout, toggleMaintenanceMode, submitOrder, updateOrderStatus, addProduct,
+        adminLogin, logout, toggleMaintenanceMode, submitOrder, updateOrderStatus, removeOrder, addProduct,
         updateProduct, removeProduct, getPaymentProofSignedUrl: api.getPaymentProofSignedUrl,
       }}
     >

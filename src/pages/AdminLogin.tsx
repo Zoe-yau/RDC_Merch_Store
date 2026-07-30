@@ -29,7 +29,7 @@ export const AdminLogin: React.FC = () => {
     <div className="min-h-screen bg-bm-bg flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <div className="font-serif text-3xl text-bm-text">Executive Board</div>
+          <div className="font-serif text-3xl text-bm-text">Fundraising Chair</div>
           <div className="font-sans text-[10px] uppercase tracking-[0.3em] text-rho-teal mt-2">
             Admin Access
           </div>

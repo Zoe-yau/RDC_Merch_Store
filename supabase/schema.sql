@@ -35,6 +35,7 @@ create table if not exists public.orders (
   buyer_name text not null,
   referrer text not null,
   email text not null,
+  phone text not null,
   -- items: [{ "productId", "productName", "size", "color", "quantity", "unitPrice" }, ...]
   items jsonb not null,
   total numeric(10, 2) not null check (total >= 0),
@@ -43,6 +44,10 @@ create table if not exists public.orders (
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'fulfilled')),
   created_at timestamptz not null default now()
 );
+
+-- If this schema was already applied before the `phone` column existed, this
+-- adds it to the existing table (new orders still require it via the app).
+alter table public.orders add column if not exists phone text not null default '';
 
 create table if not exists public.site_settings (
   id uuid primary key default gen_random_uuid(),
@@ -117,6 +122,11 @@ create policy "orders are updatable by admins only"
   to authenticated
   using (true)
   with check (true);
+
+create policy "orders are deletable by admins only"
+  on public.orders for delete
+  to authenticated
+  using (true);
 
 alter table public.site_settings enable row level security;
 

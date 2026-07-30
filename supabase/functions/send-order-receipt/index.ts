@@ -59,7 +59,7 @@ function renderReceiptHtml(order: OrderRecord): string {
       <p style="color:#666; font-size:13px;">
         Order ID: ${order.id}<br/>
         This confirms we received your submission — your payment screenshot will be
-        reviewed by the exec board before your order is fulfilled.
+        reviewed by the fundraising chair before your order is fulfilled.
       </p>
     </div>`;
 }

@@ -7,7 +7,7 @@
    `supabase/members_seed.csv` (columns already match: `first_name,last_name`;
    see `members_seed.example.csv` for the format — the real roster file is
    gitignored since it contains member names).
-4. Authentication -> Users -> Add user, once per exec board member who needs
+4. Authentication -> Users -> Add user, once per fundraising chair who needs
    admin access (email + password). These are the only accounts that can sign
    in via `adminLogin` and get write access to products/orders/settings.
 5. Project Settings -> API -> copy the Project URL and anon public key into
@@ -60,7 +60,7 @@ by a database webhook on `orders` INSERT. Setup:
    Edge Functions -> Logs in the dashboard if it doesn't.
 
 This only confirms the order was received — it is not payment confirmation
-(the exec board still manually reviews the Venmo screenshot).
+(the fundraising chair still manually reviews the Venmo screenshot).
 
 ## Out of scope (by design)
 

@@ -23,7 +23,7 @@ const emptyVariant = (): ColorVariant => ({ name: '', front: '', back: '' });
 
 export const AdminDashboard: React.FC = () => {
   const {
-    orders, products, updateOrderStatus, addProduct, updateProduct, removeProduct,
+    orders, products, updateOrderStatus, removeOrder, addProduct, updateProduct, removeProduct,
     isMaintenanceMode, toggleMaintenanceMode, getPaymentProofSignedUrl,
   } = useShop();
   const [tab, setTab] = useState<Tab>('Orders');
@@ -99,6 +99,11 @@ export const AdminDashboard: React.FC = () => {
   const handleRemoveClick = (productId: string) => {
     if (editingId === productId) resetForm();
     removeProduct(productId).catch((err) => console.error('Failed to remove product', err));
+  };
+
+  const handleRemoveOrderClick = (orderId: string) => {
+    if (!window.confirm('Remove this order? This cannot be undone.')) return;
+    removeOrder(orderId).catch((err) => console.error('Failed to remove order', err));
   };
 
   const handleNextStep = (e: React.FormEvent) => {
@@ -186,10 +191,12 @@ export const AdminDashboard: React.FC = () => {
                 <tr className="text-left text-xs uppercase tracking-wide text-bm-muted border-b border-bm-border">
                   <th className="py-2 pr-4">Order</th>
                   <th className="py-2 pr-4">Buyer</th>
+                  <th className="py-2 pr-4">Phone</th>
                   <th className="py-2 pr-4">Referrer</th>
                   <th className="py-2 pr-4">Total</th>
                   <th className="py-2 pr-4">Proof</th>
                   <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4"></th>
                 </tr>
               </thead>
               <tbody>
@@ -197,6 +204,7 @@ export const AdminDashboard: React.FC = () => {
                   <tr key={order.id} className="border-b border-bm-border">
                     <td className="py-3 pr-4">{order.id.slice(0, 8).toUpperCase()}</td>
                     <td className="py-3 pr-4">{order.buyerName}</td>
+                    <td className="py-3 pr-4">{order.phone}</td>
                     <td className="py-3 pr-4">{order.referrer}</td>
                     <td className="py-3 pr-4">${order.total.toFixed(2)}</td>
                     <td className="py-3 pr-4">
@@ -222,6 +230,15 @@ export const AdminDashboard: React.FC = () => {
                         <option value="confirmed">Confirmed</option>
                         <option value="fulfilled">Fulfilled</option>
                       </select>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveOrderClick(order.id)}
+                        className="text-[11px] uppercase tracking-wide text-rho-rose hover:text-rho-rose/70"
+                      >
+                        Remove
+                      </button>
                     </td>
                   </tr>
                 ))}

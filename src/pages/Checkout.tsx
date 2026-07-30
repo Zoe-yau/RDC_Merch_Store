@@ -12,6 +12,7 @@ export const Checkout: React.FC = () => {
     currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''
   );
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [referrer, setReferrer] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string>('');
@@ -31,7 +32,7 @@ export const Checkout: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!buyerName.trim() || !email.trim() || !referrer || !proofFile || cart.length === 0) return;
+    if (!buyerName.trim() || !email.trim() || !phone.trim() || !referrer || !proofFile || cart.length === 0) return;
 
     setError('');
     setSubmitting(true);
@@ -40,6 +41,7 @@ export const Checkout: React.FC = () => {
         {
           buyerName,
           email,
+          phone,
           referrer,
           items: cart.map((item) => ({
             productId: item.product.id,
@@ -131,6 +133,17 @@ export const Checkout: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full border border-bm-border bg-bm-card px-4 py-3 text-sm focus:outline-none focus:border-rho-teal"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-wide text-bm-muted block mb-1">Phone Number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="w-full border border-bm-border bg-bm-card px-4 py-3 text-sm focus:outline-none focus:border-rho-teal"
               required
             />

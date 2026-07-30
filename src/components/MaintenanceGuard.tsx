@@ -17,7 +17,7 @@ export const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ chil
           </span>
           <h1 className="text-3xl font-light mb-4">Shop Currently Closed</h1>
           <p className="font-sans text-sm text-bm-muted leading-relaxed mb-6">
-            We are preparing for our next drop! Please check back during our upcoming order window or contact executive board.
+            We are preparing for our next drop! Please check back during our upcoming order window or contact the fundraising chair.
           </p>
           <div className="w-12 h-[1px] bg-rho-rose mx-auto mb-6"></div>
           <Link

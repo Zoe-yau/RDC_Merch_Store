@@ -29,6 +29,7 @@ export interface Order {
   buyerName: string;
   referrer: string;
   email: string;
+  phone: string;
   items: OrderItem[];
   total: number;
   paymentProofPath: string; // path within the private "payment-proofs" storage bucket

@@ -25,7 +25,7 @@ export function memberFromName(firstName: string, lastName: string): Member {
 
 // ============================================================================
 // Admin auth (real Supabase Auth — email/password, restricted to pre-created
-// exec board accounts; see supabase/SETUP.md)
+// fundraising chair accounts; see supabase/SETUP.md)
 // ============================================================================
 export async function adminSignIn(email: string, password: string): Promise<void> {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -153,6 +153,7 @@ interface OrderRow {
   buyer_name: string;
   referrer: string;
   email: string;
+  phone: string;
   items: OrderItem[];
   total: number;
   payment_proof_path: string;
@@ -166,6 +167,7 @@ function rowToOrder(row: OrderRow): Order {
     buyerName: row.buyer_name,
     referrer: row.referrer,
     email: row.email,
+    phone: row.phone,
     items: row.items,
     total: Number(row.total),
     paymentProofPath: row.payment_proof_path,
@@ -203,6 +205,7 @@ export async function submitOrder(orderData: NewOrderData, paymentProofFile: Fil
     buyer_name: orderData.buyerName,
     referrer: orderData.referrer,
     email: orderData.email,
+    phone: orderData.phone,
     items: orderData.items,
     total: orderData.total,
     payment_proof_path: path,
@@ -216,6 +219,11 @@ export async function submitOrder(orderData: NewOrderData, paymentProofFile: Fil
 
 export async function updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
   const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
+  if (error) throw error;
+}
+
+export async function removeOrder(orderId: string): Promise<void> {
+  const { error } = await supabase.from('orders').delete().eq('id', orderId);
   if (error) throw error;
 }
 
