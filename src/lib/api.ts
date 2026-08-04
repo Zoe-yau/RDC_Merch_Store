@@ -101,7 +101,7 @@ async function resolveVariants(
       const files = variantFiles[i] ?? {};
       const front = files.front ? await uploadProductImage(files.front) : variant.front;
       const back = files.back ? await uploadProductImage(files.back) : variant.back;
-      return { name: variant.name, front, back };
+      return { name: variant.name, front, back, swatch: variant.swatch || undefined };
     })
   );
 }

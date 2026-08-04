@@ -4,6 +4,8 @@ import { PlaceholderImage } from '../components/PlaceholderImage';
 import { useShop } from '../context/ShopContext';
 import type { VariantFiles } from '../lib/api';
 import type { ColorVariant, Order, Product } from '../data/mockData';
+import { colorForName } from '../lib/colorSwatch';
+import { DraggableColorPicker } from '../components/DraggableColorPicker';
 
 const TABS = ['Orders', 'Products', 'Settings'] as const;
 type Tab = (typeof TABS)[number];
@@ -19,7 +21,7 @@ const emptyDetails = {
   inStock: true,
 };
 
-const emptyVariant = (): ColorVariant => ({ name: '', front: '', back: '' });
+const emptyVariant = (): ColorVariant => ({ name: '', front: '', back: '', swatch: '' });
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -35,6 +37,8 @@ export const AdminDashboard: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [proofUrls, setProofUrls] = useState<Record<string, string>>({});
+  const [openSwatchIndex, setOpenSwatchIndex] = useState<number | null>(null);
+  const [swatchAnchor, setSwatchAnchor] = useState({ x: 0, y: 0 });
 
   const resizeVariants = (count: number, current: ColorVariant[]): ColorVariant[] => {
     const next = current.slice(0, count);
@@ -57,6 +61,10 @@ export const AdminDashboard: React.FC = () => {
 
   const handleVariantNameChange = (index: number, name: string) => {
     setColorVariants((prev) => prev.map((v, i) => (i === index ? { ...v, name } : v)));
+  };
+
+  const handleVariantSwatchChange = (index: number, swatch: string) => {
+    setColorVariants((prev) => prev.map((v, i) => (i === index ? { ...v, swatch } : v)));
   };
 
   const handleVariantPhotoChange = (index: number, slot: 'front' | 'back', file: File | undefined) => {
@@ -89,11 +97,33 @@ export const AdminDashboard: React.FC = () => {
       sizes: product.sizes.join(', '),
       inStock: product.inStock,
     });
-    const variants = product.colorVariants.length > 0 ? product.colorVariants : [emptyVariant()];
+    const variants =
+      product.colorVariants.length > 0
+        ? product.colorVariants.map((v) => ({ ...v, swatch: v.swatch ?? '' }))
+        : [emptyVariant()];
     setColorCount(variants.length);
     setColorVariants(variants);
     setVariantFiles(variants.map(() => ({})));
     setStep('details');
+  };
+
+  const handleToggleAvailability = (product: Product) => {
+    updateProduct(
+      product.id,
+      {
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        description: product.description,
+        sizes: product.sizes,
+        colorVariants: product.colorVariants,
+        inStock: !product.inStock,
+      },
+      product.colorVariants.map(() => ({}))
+    ).catch((err) => {
+      console.error('Failed to update product availability', err);
+      window.alert('Could not update availability: ' + (err instanceof Error ? err.message : String(err)));
+    });
   };
 
   const handleRemoveClick = (productId: string) => {
@@ -270,8 +300,17 @@ export const AdminDashboard: React.FC = () => {
                         ${p.price.toFixed(2)} · {p.category} · {p.colorVariants.length} color
                         {p.colorVariants.length === 1 ? '' : 's'}
                       </p>
+                      {!p.inStock && (
+                        <p className="text-[10px] uppercase tracking-wide text-rho-rose mt-0.5">Unavailable</p>
+                      )}
                     </div>
                     <div className="flex gap-3 text-[11px] uppercase tracking-wide">
+                      <button
+                        onClick={() => handleToggleAvailability(p)}
+                        className={p.inStock ? 'text-bm-muted hover:text-bm-text' : 'text-rho-teal hover:text-rho-teal/70'}
+                      >
+                        {p.inStock ? 'Mark Unavailable' : 'Mark Available'}
+                      </button>
                       <button
                         onClick={() => handleEditClick(p)}
                         className="text-rho-teal hover:text-rho-teal/70"
@@ -394,6 +433,42 @@ export const AdminDashboard: React.FC = () => {
                         onChange={(e) => handleVariantNameChange(i, e.target.value)}
                         className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
                       />
+                      <div>
+                        <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
+                          Shop Swatch Color
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setSwatchAnchor({ x: rect.left, y: rect.bottom + 8 });
+                              setOpenSwatchIndex(i);
+                            }}
+                            style={{ backgroundColor: variant.swatch || colorForName(variant.name || 'default') }}
+                            className="w-9 h-9 border border-bm-border shrink-0 cursor-pointer"
+                            aria-label="Choose swatch color"
+                          />
+                          <input
+                            type="text"
+                            placeholder="#000000"
+                            value={variant.swatch}
+                            onChange={(e) => handleVariantSwatchChange(i, e.target.value)}
+                            className="flex-1 border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+                          />
+                        </div>
+                        <p className="text-[11px] text-bm-muted mt-1">
+                          Shown as the color dot on the shop grid. Leave blank to auto-match the color name.
+                        </p>
+                        {openSwatchIndex === i && (
+                          <DraggableColorPicker
+                            value={variant.swatch || colorForName(variant.name || 'default')}
+                            onChange={(hex) => handleVariantSwatchChange(i, hex)}
+                            onClose={() => setOpenSwatchIndex(null)}
+                            anchor={swatchAnchor}
+                          />
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">

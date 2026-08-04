@@ -2,6 +2,7 @@ export interface ColorVariant {
   name: string;
   front: string; // public Supabase Storage URL; empty string means no photo uploaded yet
   back: string;
+  swatch?: string; // hex code for the shop's color swatch; falls back to a name-derived color when unset
 }
 
 export interface Product {
