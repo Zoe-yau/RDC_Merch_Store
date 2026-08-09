@@ -178,6 +178,9 @@ export const InfoPage: React.FC = () => {
                 ) : (
                   <p className="text-sm font-medium text-bm-text">{infoVenmo}</p>
                 )}
+                <p className="text-xs text-bm-muted mt-3">
+                  If you need an additional payment method, contact the fundraising chair.
+                </p>
               </Card>
             )}
 
@@ -196,7 +199,7 @@ export const InfoPage: React.FC = () => {
                     {infoGoal}
                   </span>
                   <p className="text-sm text-bm-text leading-relaxed">
-                    Actives must raise at least this much by the end of the semester!!
+                    Actives must raise at least $20 by the end of the semester!!
                   </p>
                 </div>
               </Card>
