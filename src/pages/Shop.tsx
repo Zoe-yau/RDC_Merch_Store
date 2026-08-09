@@ -4,7 +4,7 @@ import { ProductCard } from '../components/ProductCard';
 import { useShop } from '../context/ShopContext';
 import type { Product } from '../data/mockData';
 
-const CATEGORIES: Array<Product['category'] | 'All'> = ['All', 'Tops', 'Outerwear', 'Bottoms', 'Accessories'];
+const CATEGORIES: Array<Product['category'] | 'All'> = ['All', 'Tops', 'Tanks', 'Outerwear', 'Bottoms', 'Accessories'];
 
 export const Shop: React.FC = () => {
   const { products } = useShop();

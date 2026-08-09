@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import * as api from '../lib/api';
 import type { NewOrderData, VariantFiles } from '../lib/api';
-import type { Product, Order, Member } from '../data/mockData';
+import type { Product, Order, Member, SiteSettings } from '../data/mockData';
 
 export interface CartItem {
   product: Product;
@@ -19,6 +19,7 @@ interface ShopContextType {
   currentUser: Member | null;
   isAdminLoggedIn: boolean;
   isMaintenanceMode: boolean;
+  siteSettings: SiteSettings;
   productsLoading: boolean;
   addToCart: (product: Product, size: string, color: string, quantity: number) => void;
   removeFromCart: (productId: string, size: string, color: string) => void;
@@ -28,12 +29,15 @@ interface ShopContextType {
   adminLogin: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   toggleMaintenanceMode: () => Promise<void>;
+  updateBanner: (enabled: boolean, text: string) => Promise<void>;
+  updateInfoPage: (info: Omit<SiteSettings, 'maintenanceMode' | 'bannerEnabled' | 'bannerText'>) => Promise<void>;
   submitOrder: (order: NewOrderData, paymentProofFile: File) => Promise<void>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   removeOrder: (orderId: string) => Promise<void>;
-  addProduct: (product: Omit<Product, 'id'>, variantFiles: VariantFiles) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id' | 'sortOrder'>, variantFiles: VariantFiles) => Promise<void>;
   updateProduct: (productId: string, product: Omit<Product, 'id'>, variantFiles: VariantFiles) => Promise<void>;
   removeProduct: (productId: string) => Promise<void>;
+  reorderProducts: (orderedIds: string[]) => Promise<void>;
   getPaymentProofSignedUrl: (path: string) => Promise<string>;
 }
 
@@ -47,7 +51,20 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [cart, setCart] = useState<CartItem[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState<boolean>(false);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>({
+    maintenanceMode: false,
+    bannerEnabled: false,
+    bannerText: '',
+    infoTitle: 'Fundraiser Info',
+    infoDeadline: '',
+    infoVenmo: '',
+    infoShipping: '',
+    infoGoal: '',
+    infoChairName: '',
+    infoChairPhone: '',
+    infoChairEmail: '',
+    infoChairEmail2: '',
+  });
 
   useEffect(() => {
     api
@@ -56,8 +73,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => console.error('Failed to load products', err))
       .finally(() => setProductsLoading(false));
 
-    api.getMaintenanceMode().catch((err) => console.error('Failed to load site settings', err));
-    api.getMaintenanceMode().then(setIsMaintenanceMode).catch(() => {});
+    api.getSiteSettings().then(setSiteSettings).catch((err) => console.error('Failed to load site settings', err));
 
     api.getAdminSession().then((session) => setIsAdminLoggedIn(Boolean(session)));
     const {
@@ -123,9 +139,29 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const toggleMaintenanceMode = async () => {
-    const next = !isMaintenanceMode;
-    await api.setMaintenanceMode(next);
-    setIsMaintenanceMode(next);
+    const next = !siteSettings.maintenanceMode;
+    await api.updateSiteSettings({ maintenance_mode: next });
+    setSiteSettings((prev) => ({ ...prev, maintenanceMode: next }));
+  };
+
+  const updateBanner = async (enabled: boolean, text: string) => {
+    await api.updateSiteSettings({ banner_enabled: enabled, banner_text: text });
+    setSiteSettings((prev) => ({ ...prev, bannerEnabled: enabled, bannerText: text }));
+  };
+
+  const updateInfoPage = async (info: Omit<SiteSettings, 'maintenanceMode' | 'bannerEnabled' | 'bannerText'>) => {
+    await api.updateSiteSettings({
+      info_title: info.infoTitle,
+      info_deadline: info.infoDeadline,
+      info_venmo: info.infoVenmo,
+      info_shipping: info.infoShipping,
+      info_goal: info.infoGoal,
+      info_chair_name: info.infoChairName,
+      info_chair_phone: info.infoChairPhone,
+      info_chair_email: info.infoChairEmail,
+      info_chair_email_2: info.infoChairEmail2,
+    });
+    setSiteSettings((prev) => ({ ...prev, ...info }));
   };
 
   const submitOrder = async (orderData: NewOrderData, paymentProofFile: File) => {
@@ -144,8 +180,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
   };
 
-  const addProduct = async (productData: Omit<Product, 'id'>, variantFiles: VariantFiles) => {
-    await api.addProduct(productData, variantFiles);
+  const addProduct = async (productData: Omit<Product, 'id' | 'sortOrder'>, variantFiles: VariantFiles) => {
+    const sortOrder = products.length ? Math.max(...products.map((p) => p.sortOrder)) + 1 : 0;
+    await api.addProduct({ ...productData, sortOrder }, variantFiles);
     setProducts(await api.getProducts());
   };
 
@@ -159,13 +196,21 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProducts((prev) => prev.filter((p) => p.id !== productId));
   };
 
+  const reorderProducts = async (orderedIds: string[]) => {
+    const byId = new Map(products.map((p) => [p.id, p]));
+    setProducts(orderedIds.map((id, i) => ({ ...byId.get(id)!, sortOrder: i })));
+    await api.reorderProducts(orderedIds);
+  };
+
   return (
     <ShopContext.Provider
       value={{
-        products, orders, lastOrder, cart, currentUser, isAdminLoggedIn, isMaintenanceMode, productsLoading,
+        products, orders, lastOrder, cart, currentUser, isAdminLoggedIn,
+        isMaintenanceMode: siteSettings.maintenanceMode, siteSettings, productsLoading,
         addToCart, removeFromCart, updateCartQuantity, clearCart, checkMember,
-        adminLogin, logout, toggleMaintenanceMode, submitOrder, updateOrderStatus, removeOrder, addProduct,
-        updateProduct, removeProduct, getPaymentProofSignedUrl: api.getPaymentProofSignedUrl,
+        adminLogin, logout, toggleMaintenanceMode, updateBanner, updateInfoPage,
+        submitOrder, updateOrderStatus, removeOrder, addProduct,
+        updateProduct, removeProduct, reorderProducts, getPaymentProofSignedUrl: api.getPaymentProofSignedUrl,
       }}
     >
       {children}

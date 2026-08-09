@@ -21,14 +21,22 @@ create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   price numeric(10, 2) not null check (price >= 0),
-  category text not null check (category in ('Tops', 'Outerwear', 'Accessories', 'Bottoms')),
+  category text not null check (category in ('Tops', 'Tanks', 'Outerwear', 'Accessories', 'Bottoms')),
   description text not null default '',
   sizes text[] not null default '{}',
-  -- color_variants: [{ "name": "Dusty Rose", "front": "<public storage URL>", "back": "<public storage URL>" }, ...]
+  -- color_variants: [{ "name": "Dusty Rose", "front": "<public storage URL>", "back": "<public storage URL>", "detail": "<public storage URL>" }, ...]
   color_variants jsonb not null default '[]',
   in_stock boolean not null default true,
+  sort_order integer not null default 0, -- lower shows first on the shop page; admin-reorderable
   created_at timestamptz not null default now()
 );
+
+-- If this schema was already applied before 'Tanks' was a valid category or
+-- before sort_order existed, bring an existing table up to date.
+alter table public.products add column if not exists sort_order integer not null default 0;
+alter table public.products drop constraint if exists products_category_check;
+alter table public.products add constraint products_category_check
+  check (category in ('Tops', 'Tanks', 'Outerwear', 'Accessories', 'Bottoms'));
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -58,6 +66,24 @@ create table if not exists public.site_settings (
 insert into public.site_settings (maintenance_mode)
 select false
 where not exists (select 1 from public.site_settings);
+
+-- Sale announcement banner (shown in the site header) and the admin-editable
+-- static Information page. Added after the initial table — use `add column
+-- if not exists` so this is safe to re-run against an existing database.
+alter table public.site_settings add column if not exists banner_enabled boolean not null default false;
+alter table public.site_settings add column if not exists banner_text text not null default '';
+alter table public.site_settings add column if not exists info_title text not null default 'Fundraiser Info';
+alter table public.site_settings add column if not exists info_deadline text not null default '';
+alter table public.site_settings add column if not exists info_venmo text not null default '';
+alter table public.site_settings add column if not exists info_shipping text not null default 'Orders will be shipped within 2-4 weeks. Items are made to order.';
+alter table public.site_settings add column if not exists info_goal text not null default '';
+alter table public.site_settings add column if not exists info_chair_name text not null default '';
+alter table public.site_settings add column if not exists info_chair_phone text not null default '';
+alter table public.site_settings add column if not exists info_chair_email text not null default '';
+alter table public.site_settings add column if not exists info_chair_email_2 text not null default '';
+-- Superseded by the structured info_* columns above; drop if present from an
+-- earlier version of this schema.
+alter table public.site_settings drop column if exists info_content;
 
 -- ============================================================================
 -- Member login check (RPC)

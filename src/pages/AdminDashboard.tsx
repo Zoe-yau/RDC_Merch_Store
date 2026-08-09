@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from '../components/Header';
 import { PlaceholderImage } from '../components/PlaceholderImage';
 import { useShop } from '../context/ShopContext';
@@ -21,12 +21,12 @@ const emptyDetails = {
   inStock: true,
 };
 
-const emptyVariant = (): ColorVariant => ({ name: '', front: '', back: '', swatch: '' });
+const emptyVariant = (): ColorVariant => ({ name: '', front: '', back: '', detail: '', swatch: '' });
 
 export const AdminDashboard: React.FC = () => {
   const {
-    orders, products, updateOrderStatus, removeOrder, addProduct, updateProduct, removeProduct,
-    isMaintenanceMode, toggleMaintenanceMode, getPaymentProofSignedUrl,
+    orders, products, updateOrderStatus, removeOrder, addProduct, updateProduct, removeProduct, reorderProducts,
+    isMaintenanceMode, toggleMaintenanceMode, siteSettings, updateBanner, updateInfoPage, getPaymentProofSignedUrl,
   } = useShop();
   const [tab, setTab] = useState<Tab>('Orders');
   const [step, setStep] = useState<Step>('details');
@@ -35,10 +35,75 @@ export const AdminDashboard: React.FC = () => {
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>([emptyVariant()]);
   const [variantFiles, setVariantFiles] = useState<VariantFiles>([{}]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSortOrder, setEditingSortOrder] = useState(0);
   const [saving, setSaving] = useState(false);
   const [proofUrls, setProofUrls] = useState<Record<string, string>>({});
   const [openSwatchIndex, setOpenSwatchIndex] = useState<number | null>(null);
   const [swatchAnchor, setSwatchAnchor] = useState({ x: 0, y: 0 });
+
+  const [bannerEnabled, setBannerEnabled] = useState(siteSettings.bannerEnabled);
+  const [bannerText, setBannerText] = useState(siteSettings.bannerText);
+  const [savingBanner, setSavingBanner] = useState(false);
+  const [infoTitle, setInfoTitle] = useState(siteSettings.infoTitle);
+  const [infoDeadline, setInfoDeadline] = useState(siteSettings.infoDeadline);
+  const [infoVenmo, setInfoVenmo] = useState(siteSettings.infoVenmo);
+  const [infoShipping, setInfoShipping] = useState(siteSettings.infoShipping);
+  const [infoGoal, setInfoGoal] = useState(siteSettings.infoGoal);
+  const [infoChairName, setInfoChairName] = useState(siteSettings.infoChairName);
+  const [infoChairPhone, setInfoChairPhone] = useState(siteSettings.infoChairPhone);
+  const [infoChairEmail, setInfoChairEmail] = useState(siteSettings.infoChairEmail);
+  const [infoChairEmail2, setInfoChairEmail2] = useState(siteSettings.infoChairEmail2);
+  const [savingInfo, setSavingInfo] = useState(false);
+
+  useEffect(() => {
+    setBannerEnabled(siteSettings.bannerEnabled);
+    setBannerText(siteSettings.bannerText);
+    setInfoTitle(siteSettings.infoTitle);
+    setInfoDeadline(siteSettings.infoDeadline);
+    setInfoVenmo(siteSettings.infoVenmo);
+    setInfoShipping(siteSettings.infoShipping);
+    setInfoGoal(siteSettings.infoGoal);
+    setInfoChairName(siteSettings.infoChairName);
+    setInfoChairPhone(siteSettings.infoChairPhone);
+    setInfoChairEmail(siteSettings.infoChairEmail);
+    setInfoChairEmail2(siteSettings.infoChairEmail2);
+  }, [siteSettings]);
+
+  const handleSaveBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBanner(true);
+    try {
+      await updateBanner(bannerEnabled, bannerText);
+    } catch (err) {
+      console.error('Failed to update banner', err);
+      window.alert('Could not update banner: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSavingBanner(false);
+    }
+  };
+
+  const handleSaveInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingInfo(true);
+    try {
+      await updateInfoPage({
+        infoTitle,
+        infoDeadline,
+        infoVenmo,
+        infoShipping,
+        infoGoal,
+        infoChairName,
+        infoChairPhone,
+        infoChairEmail,
+        infoChairEmail2,
+      });
+    } catch (err) {
+      console.error('Failed to update info page', err);
+      window.alert('Could not update info page: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSavingInfo(false);
+    }
+  };
 
   const resizeVariants = (count: number, current: ColorVariant[]): ColorVariant[] => {
     const next = current.slice(0, count);
@@ -67,7 +132,7 @@ export const AdminDashboard: React.FC = () => {
     setColorVariants((prev) => prev.map((v, i) => (i === index ? { ...v, swatch } : v)));
   };
 
-  const handleVariantPhotoChange = (index: number, slot: 'front' | 'back', file: File | undefined) => {
+  const handleVariantPhotoChange = (index: number, slot: 'front' | 'back' | 'detail', file: File | undefined) => {
     if (!file) return;
     setVariantFiles((prev) => prev.map((v, i) => (i === index ? { ...v, [slot]: file } : v)));
     const reader = new FileReader();
@@ -80,6 +145,7 @@ export const AdminDashboard: React.FC = () => {
 
   const resetForm = () => {
     setEditingId(null);
+    setEditingSortOrder(0);
     setDetails(emptyDetails);
     setColorCount(1);
     setColorVariants([emptyVariant()]);
@@ -89,6 +155,7 @@ export const AdminDashboard: React.FC = () => {
 
   const handleEditClick = (product: Product) => {
     setEditingId(product.id);
+    setEditingSortOrder(product.sortOrder);
     setDetails({
       name: product.name,
       price: product.price,
@@ -118,11 +185,23 @@ export const AdminDashboard: React.FC = () => {
         sizes: product.sizes,
         colorVariants: product.colorVariants,
         inStock: !product.inStock,
+        sortOrder: product.sortOrder,
       },
       product.colorVariants.map(() => ({}))
     ).catch((err) => {
       console.error('Failed to update product availability', err);
       window.alert('Could not update availability: ' + (err instanceof Error ? err.message : String(err)));
+    });
+  };
+
+  const handleMoveProduct = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= products.length) return;
+    const ids = products.map((p) => p.id);
+    [ids[index], ids[targetIndex]] = [ids[targetIndex], ids[index]];
+    reorderProducts(ids).catch((err) => {
+      console.error('Failed to reorder products', err);
+      window.alert('Could not reorder products: ' + (err instanceof Error ? err.message : String(err)));
     });
   };
 
@@ -168,7 +247,7 @@ export const AdminDashboard: React.FC = () => {
     setSaving(true);
     try {
       if (editingId) {
-        await updateProduct(editingId, productData, variantFiles);
+        await updateProduct(editingId, { ...productData, sortOrder: editingSortOrder }, variantFiles);
       } else {
         await addProduct(productData, variantFiles);
       }
@@ -227,6 +306,7 @@ export const AdminDashboard: React.FC = () => {
                 <tr className="text-left text-xs uppercase tracking-wide text-bm-muted border-b border-bm-border">
                   <th className="py-2 pr-4">Order</th>
                   <th className="py-2 pr-4">Buyer</th>
+                  <th className="py-2 pr-4">Email</th>
                   <th className="py-2 pr-4">Phone</th>
                   <th className="py-2 pr-4">Referrer</th>
                   <th className="py-2 pr-4">Total</th>
@@ -240,6 +320,7 @@ export const AdminDashboard: React.FC = () => {
                   <tr key={order.id} className="border-b border-bm-border">
                     <td className="py-3 pr-4">{order.id.slice(0, 8).toUpperCase()}</td>
                     <td className="py-3 pr-4">{order.buyerName}</td>
+                    <td className="py-3 pr-4">{order.email}</td>
                     <td className="py-3 pr-4">{order.phone}</td>
                     <td className="py-3 pr-4">{order.referrer}</td>
                     <td className="py-3 pr-4">${order.total.toFixed(2)}</td>
@@ -289,8 +370,28 @@ export const AdminDashboard: React.FC = () => {
             <div>
               <h2 className="text-xs uppercase tracking-wide text-bm-muted mb-4">Current Products</h2>
               <div className="space-y-3">
-                {products.map((p) => (
+                {products.map((p, i) => (
                   <div key={p.id} className="flex items-center gap-3 border border-bm-border bg-bm-card p-3">
+                    <div className="flex flex-col shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveProduct(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Move up"
+                        className="text-bm-muted hover:text-bm-text disabled:opacity-25 disabled:hover:text-bm-muted leading-none px-1"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveProduct(i, 1)}
+                        disabled={i === products.length - 1}
+                        aria-label="Move down"
+                        className="text-bm-muted hover:text-bm-text disabled:opacity-25 disabled:hover:text-bm-muted leading-none px-1"
+                      >
+                        ▼
+                      </button>
+                    </div>
                     <div className="w-12 h-14 shrink-0">
                       <PlaceholderImage src={p.colorVariants[0]?.front} className="aspect-auto h-full" />
                     </div>
@@ -370,6 +471,7 @@ export const AdminDashboard: React.FC = () => {
                     className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
                   >
                     <option value="Tops">Tops</option>
+                    <option value="Tanks">Tanks</option>
                     <option value="Outerwear">Outerwear</option>
                     <option value="Bottoms">Bottoms</option>
                     <option value="Accessories">Accessories</option>
@@ -469,7 +571,7 @@ export const AdminDashboard: React.FC = () => {
                           />
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
                             Front
@@ -495,6 +597,20 @@ export const AdminDashboard: React.FC = () => {
                             type="file"
                             accept="image/*"
                             onChange={(e) => handleVariantPhotoChange(i, 'back', e.target.files?.[0])}
+                            className="w-full text-xs text-bm-muted file:mr-2 file:py-1.5 file:px-3 file:border file:border-bm-border file:bg-bm-bg file:text-[11px] file:uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
+                            Detail
+                          </label>
+                          <div className="w-full mb-2">
+                            <PlaceholderImage src={variant.detail} label="Detail" />
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleVariantPhotoChange(i, 'detail', e.target.files?.[0])}
                             className="w-full text-xs text-bm-muted file:mr-2 file:py-1.5 file:px-3 file:border file:border-bm-border file:bg-bm-bg file:text-[11px] file:uppercase"
                           />
                         </div>
@@ -545,6 +661,163 @@ export const AdminDashboard: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
+
+        {tab === 'Settings' && (
+          <form
+            onSubmit={handleSaveBanner}
+            className="border border-bm-border bg-bm-card p-6 max-w-md mt-6 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-bm-text">Sale Announcement Banner</p>
+                <p className="text-xs text-bm-muted mt-1">
+                  Shows as a strip above the header on every page.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBannerEnabled((v) => !v)}
+                className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${
+                  bannerEnabled ? 'bg-rho-rose' : 'bg-bm-border'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                    bannerEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+            <input
+              type="text"
+              placeholder="e.g. 20% off all hoodies this week!"
+              value={bannerText}
+              onChange={(e) => setBannerText(e.target.value)}
+              className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+            />
+            <button
+              type="submit"
+              disabled={savingBanner}
+              className="w-full bg-rho-teal text-white py-2.5 text-xs uppercase tracking-widest hover:bg-rho-teal/90 transition-colors disabled:opacity-60"
+            >
+              {savingBanner ? 'Saving…' : 'Save Banner'}
+            </button>
+          </form>
+        )}
+
+        {tab === 'Settings' && (
+          <form
+            onSubmit={handleSaveInfo}
+            className="border border-bm-border bg-bm-card p-6 max-w-md mt-6 space-y-3"
+          >
+            <div>
+              <p className="text-sm text-bm-text">Information Page</p>
+              <p className="text-xs text-bm-muted mt-1">
+                Editable content shown on the public "Info" page (linked in the header).
+              </p>
+            </div>
+            <input
+              type="text"
+              placeholder="Page title"
+              value={infoTitle}
+              onChange={(e) => setInfoTitle(e.target.value)}
+              className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+            />
+
+            <div>
+              <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
+                Payment &amp; Order Form Deadline
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Friday, March 20"
+                value={infoDeadline}
+                onChange={(e) => setInfoDeadline(e.target.value)}
+                className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
+                Venmo Account
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. @RhoDeltaChi-Fundraising"
+                value={infoVenmo}
+                onChange={(e) => setInfoVenmo(e.target.value)}
+                className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
+                Shipping Note
+              </label>
+              <textarea
+                placeholder="e.g. Orders will be shipped within 2-4 weeks. Items are made to order."
+                value={infoShipping}
+                onChange={(e) => setInfoShipping(e.target.value)}
+                rows={2}
+                className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
+                Fundraising Goal
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. $500"
+                value={infoGoal}
+                onChange={(e) => setInfoGoal(e.target.value)}
+                className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+              />
+            </div>
+
+            <div className="pt-1 border-t border-bm-border">
+              <p className="text-xs uppercase tracking-wide text-bm-muted mt-3 mb-2">Fundraising Chair Contact</p>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={infoChairName}
+                  onChange={(e) => setInfoChairName(e.target.value)}
+                  className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+                />
+                <input
+                  type="text"
+                  placeholder="Phone number"
+                  value={infoChairPhone}
+                  onChange={(e) => setInfoChairPhone(e.target.value)}
+                  className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={infoChairEmail}
+                  onChange={(e) => setInfoChairEmail(e.target.value)}
+                  className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+                />
+                <input
+                  type="email"
+                  placeholder="Second email (optional)"
+                  value={infoChairEmail2}
+                  onChange={(e) => setInfoChairEmail2(e.target.value)}
+                  className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={savingInfo}
+              className="w-full bg-rho-teal text-white py-2.5 text-xs uppercase tracking-widest hover:bg-rho-teal/90 transition-colors disabled:opacity-60"
+            >
+              {savingInfo ? 'Saving…' : 'Save Info Page'}
+            </button>
+          </form>
         )}
       </div>
     </div>

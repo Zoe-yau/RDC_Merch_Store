@@ -18,49 +18,59 @@ const CartIcon: React.FC = () => (
 );
 
 export const Header: React.FC = () => {
-  const { cart, currentUser, isAdminLoggedIn, logout } = useShop();
+  const { cart, currentUser, isAdminLoggedIn, logout, siteSettings } = useShop();
   const navigate = useNavigate();
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <header className="border-b border-bm-border bg-bm-bg sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-        <span className="font-sans text-xs uppercase tracking-widest text-bm-muted w-32">
-          {currentUser ? currentUser.firstName : ''}
-        </span>
+    <header className="sticky top-0 z-40">
+      {siteSettings.bannerEnabled && siteSettings.bannerText && (
+        <div className="bg-rho-rose text-white text-center px-4 py-2 font-sans text-[11px] uppercase tracking-widest">
+          {siteSettings.bannerText}
+        </div>
+      )}
+      <div className="border-b border-bm-border bg-bm-bg">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+          <span className="font-sans text-xs uppercase tracking-widest text-bm-muted w-32">
+            {currentUser ? currentUser.firstName : ''}
+          </span>
 
-        <Link to="/shop" className="text-center">
-          <div className="font-serif text-2xl tracking-wide text-bm-text">Rho Delta Chi</div>
-          <div className="font-sans text-[10px] uppercase tracking-[0.3em] text-rho-teal">Merch Shop</div>
-        </Link>
-
-        <nav className="flex items-center gap-5 w-32 justify-end font-sans text-xs uppercase tracking-wide">
-          <Link
-            to={isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
-            className="text-rho-teal hover:text-rho-rose transition-colors"
-          >
-            Admin
+          <Link to="/shop" className="text-center">
+            <div className="font-serif text-2xl tracking-wide text-bm-text">Rho Delta Chi</div>
+            <div className="font-sans text-[10px] uppercase tracking-[0.3em] text-rho-teal">Merch Shop</div>
           </Link>
-          {currentUser && (
-            <button
-              onClick={() => {
-                logout();
-                navigate('/');
-              }}
-              className="text-bm-muted hover:text-bm-text transition-colors"
+
+          <nav className="flex items-center gap-5 w-40 justify-end font-sans text-xs uppercase tracking-wide">
+            <Link to="/info" className="text-bm-muted hover:text-bm-text transition-colors">
+              Info
+            </Link>
+            <Link
+              to={isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
+              className="text-rho-teal hover:text-rho-rose transition-colors"
             >
-              Exit
-            </button>
-          )}
-          <Link to="/cart" className="relative text-bm-text hover:text-rho-rose transition-colors">
-            <CartIcon />
-            {itemCount > 0 && (
-              <span className="absolute -top-2 -right-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-rho-rose text-white text-[9px]">
-                {itemCount}
-              </span>
+              Admin
+            </Link>
+            {currentUser && (
+              <button
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+                className="text-bm-muted hover:text-bm-text transition-colors"
+              >
+                Exit
+              </button>
             )}
-          </Link>
-        </nav>
+            <Link to="/cart" className="relative text-bm-text hover:text-rho-rose transition-colors">
+              <CartIcon />
+              {itemCount > 0 && (
+                <span className="absolute -top-2 -right-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-rho-rose text-white text-[9px]">
+                  {itemCount}
+                </span>
+              )}
+            </Link>
+          </nav>
+        </div>
       </div>
     </header>
   );

@@ -54,12 +54,12 @@ orders, and toggle maintenance mode.
 
 ## Order receipt emails
 
-Submitting an order sends a confirmation email client-side via
-[EmailJS](https://emailjs.com), right after the order lands in Supabase. See
-[`supabase/SETUP.md`](supabase/SETUP.md) for the EmailJS account/template
-setup and required `.env` values. The send is non-blocking — if EmailJS
-fails, the order still completes and the failure is only logged to the
-console.
+Submitting an order sends a confirmation email via the `send-order-receipt`
+Supabase Edge Function, which calls [Brevo](https://www.brevo.com) right
+after the order lands in Supabase. See
+[`supabase/SETUP.md`](supabase/SETUP.md) for the Brevo account setup and
+Edge Function secrets. The send is non-blocking — if it fails, the order
+still completes and the failure is only logged to the console.
 
 ## Out of scope
 

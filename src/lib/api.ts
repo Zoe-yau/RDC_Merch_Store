@@ -1,6 +1,5 @@
-import emailjs from '@emailjs/browser';
 import { supabase } from './supabaseClient';
-import type { ColorVariant, Member, Order, OrderItem, Product } from '../data/mockData';
+import type { ColorVariant, Member, Order, OrderItem, Product, SiteSettings } from '../data/mockData';
 
 // ============================================================================
 // Members / member login
@@ -46,6 +45,14 @@ export async function getAdminSession() {
 // ============================================================================
 // Products
 // ============================================================================
+interface ColorVariantRow {
+  name: string;
+  front: string;
+  back: string;
+  detail?: string;
+  swatch?: string;
+}
+
 interface ProductRow {
   id: string;
   name: string;
@@ -53,8 +60,9 @@ interface ProductRow {
   category: Product['category'];
   description: string;
   sizes: string[];
-  color_variants: ColorVariant[];
+  color_variants: ColorVariantRow[];
   in_stock: boolean;
+  sort_order: number;
 }
 
 function rowToProduct(row: ProductRow): Product {
@@ -65,8 +73,9 @@ function rowToProduct(row: ProductRow): Product {
     category: row.category,
     description: row.description,
     sizes: row.sizes,
-    colorVariants: row.color_variants,
+    colorVariants: row.color_variants.map((v) => ({ ...v, detail: v.detail ?? '' })),
     inStock: row.in_stock,
+    sortOrder: row.sort_order,
   };
 }
 
@@ -74,15 +83,25 @@ export async function getProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data as ProductRow[]).map(rowToProduct);
 }
 
+// Bulk-updates sort_order to match the given id order (index 0 shows first).
+export async function reorderProducts(orderedIds: string[]): Promise<void> {
+  const results = await Promise.all(
+    orderedIds.map((id, i) => supabase.from('products').update({ sort_order: i }).eq('id', id))
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
+}
+
 // One File per color variant slot, aligned by index with the colorVariants
 // array passed alongside it. Undefined means "keep the existing image" (edit)
 // or "no image yet" (new product).
-export type VariantFiles = Array<{ front?: File; back?: File }>;
+export type VariantFiles = Array<{ front?: File; back?: File; detail?: File }>;
 
 async function uploadProductImage(file: File): Promise<string> {
   const ext = file.name.split('.').pop() || 'jpg';
@@ -101,7 +120,8 @@ async function resolveVariants(
       const files = variantFiles[i] ?? {};
       const front = files.front ? await uploadProductImage(files.front) : variant.front;
       const back = files.back ? await uploadProductImage(files.back) : variant.back;
-      return { name: variant.name, front, back, swatch: variant.swatch || undefined };
+      const detail = files.detail ? await uploadProductImage(files.detail) : variant.detail;
+      return { name: variant.name, front, back, detail, swatch: variant.swatch || undefined };
     })
   );
 }
@@ -116,6 +136,7 @@ export async function addProduct(productData: Omit<Product, 'id'>, variantFiles:
     sizes: productData.sizes,
     color_variants: colorVariants,
     in_stock: productData.inStock,
+    sort_order: productData.sortOrder,
   });
   if (error) throw error;
 }
@@ -136,6 +157,7 @@ export async function updateProduct(
       sizes: productData.sizes,
       color_variants: colorVariants,
       in_stock: productData.inStock,
+      sort_order: productData.sortOrder,
     })
     .eq('id', productId);
   if (error) throw error;
@@ -229,18 +251,16 @@ async function sendOrderReceiptEmail(orderData: NewOrderData, orderId: string): 
     .join('\n');
 
   try {
-    await emailjs.send(
-      import.meta.env.VITE_EMAILJS_SERVICE_ID,
-      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-      {
-        buyer_name: orderData.buyerName,
+    const { error } = await supabase.functions.invoke('send-order-receipt', {
+      body: {
+        buyerName: orderData.buyerName,
         email: orderData.email,
         items,
         total: orderData.total.toFixed(2),
-        order_id: orderId,
+        orderId,
       },
-      { publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY }
-    );
+    });
+    if (error) throw error;
   } catch (err) {
     console.error('Failed to send order receipt email:', err);
   }
@@ -266,20 +286,79 @@ export async function getPaymentProofSignedUrl(path: string): Promise<string> {
 }
 
 // ============================================================================
-// Site settings (maintenance mode)
+// Site settings (maintenance mode, sale banner, info page — all admin-editable)
 // ============================================================================
 interface SiteSettingsRow {
   id: string;
   maintenance_mode: boolean;
+  banner_enabled: boolean;
+  banner_text: string;
+  info_title: string;
+  info_deadline: string;
+  info_venmo: string;
+  info_shipping: string;
+  info_goal: string;
+  info_chair_name: string;
+  info_chair_phone: string;
+  info_chair_email: string;
+  info_chair_email_2: string;
 }
 
-export async function getMaintenanceMode(): Promise<boolean> {
+function rowToSiteSettings(row: SiteSettingsRow): SiteSettings {
+  return {
+    maintenanceMode: row.maintenance_mode,
+    bannerEnabled: row.banner_enabled,
+    bannerText: row.banner_text,
+    infoTitle: row.info_title,
+    infoDeadline: row.info_deadline,
+    infoVenmo: row.info_venmo,
+    infoShipping: row.info_shipping,
+    infoGoal: row.info_goal,
+    infoChairName: row.info_chair_name,
+    infoChairPhone: row.info_chair_phone,
+    infoChairEmail: row.info_chair_email,
+    infoChairEmail2: row.info_chair_email_2,
+  };
+}
+
+const defaultSiteSettingsRow: SiteSettingsRow = {
+  id: '',
+  maintenance_mode: false,
+  banner_enabled: false,
+  banner_text: '',
+  info_title: 'Fundraiser Info',
+  info_deadline: '',
+  info_venmo: '',
+  info_shipping: 'Orders will be shipped within 2-4 weeks. Items are made to order.',
+  info_goal: '',
+  info_chair_name: '',
+  info_chair_phone: '',
+  info_chair_email: '',
+  info_chair_email_2: '',
+};
+
+export async function getSiteSettings(): Promise<SiteSettings> {
   const { data, error } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
   if (error) throw error;
-  return Boolean((data as SiteSettingsRow | null)?.maintenance_mode);
+  return rowToSiteSettings((data as SiteSettingsRow | null) ?? defaultSiteSettingsRow);
 }
 
-export async function setMaintenanceMode(value: boolean): Promise<void> {
+type SiteSettingsPatch = Partial<{
+  maintenance_mode: boolean;
+  banner_enabled: boolean;
+  banner_text: string;
+  info_title: string;
+  info_deadline: string;
+  info_venmo: string;
+  info_shipping: string;
+  info_goal: string;
+  info_chair_name: string;
+  info_chair_phone: string;
+  info_chair_email: string;
+  info_chair_email_2: string;
+}>;
+
+export async function updateSiteSettings(patch: SiteSettingsPatch): Promise<void> {
   const { data: existing, error: fetchError } = await supabase
     .from('site_settings')
     .select('id')
@@ -290,7 +369,7 @@ export async function setMaintenanceMode(value: boolean): Promise<void> {
 
   const { error } = await supabase
     .from('site_settings')
-    .update({ maintenance_mode: value })
+    .update(patch)
     .eq('id', (existing as { id: string }).id);
   if (error) throw error;
 }

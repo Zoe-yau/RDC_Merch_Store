@@ -29,6 +29,7 @@ export const ProductDetail: React.FC = () => {
     ? [
         { src: activeVariant.front, label: 'Front' },
         { src: activeVariant.back, label: 'Back' },
+        ...(activeVariant.detail ? [{ src: activeVariant.detail, label: 'Detail' }] : []),
       ]
     : [];
 

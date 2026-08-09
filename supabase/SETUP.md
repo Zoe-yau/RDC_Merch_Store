@@ -18,41 +18,43 @@
    ```
 6. `npm run dev`.
 
-## Order receipt emails (EmailJS)
+## Order receipt emails (Brevo via Edge Function)
 
-A confirmation email goes out automatically when an order is submitted, sent
-client-side via [EmailJS](https://emailjs.com) right after the Supabase
-insert succeeds. Setup:
+A confirmation email goes out automatically when an order is submitted. It's
+sent server-side by the `send-order-receipt` Supabase Edge Function (see
+`supabase/functions/send-order-receipt/index.ts`), which calls Brevo's
+transactional email API right after the Supabase insert succeeds. Sending
+happens server-side (rather than client-side, as a prior EmailJS-based
+version did) so the Brevo API key never ends up in the public JS bundle.
+Setup:
 
-1. Sign up at [emailjs.com](https://emailjs.com).
-2. Email Services -> connect a Gmail (or Outlook) account — ideally a
-   dedicated chapter account rather than a personal one, since it'll be the
-   "from" address on every receipt.
-3. Email Templates -> create a template for order receipts using these
-   variables (names must match exactly): `{{buyer_name}}`, `{{email}}`,
-   `{{items}}`, `{{total}}`, `{{order_id}}`. Write the subject/body however
-   you'd like it to read to a buyer.
-4. Account -> API Keys -> note the Public Key, Service ID, and Template ID.
-5. Add them to your `.env` file at the repo root (see `.env.example`):
+1. Sign up at [brevo.com](https://www.brevo.com) (free tier: 300 emails/day).
+2. SMTP & API -> API Keys -> generate a new API key.
+3. Senders, Domains & Dedicated IPs -> Senders -> add and verify the address
+   you want receipts to come from — ideally a dedicated chapter address
+   rather than a personal one. Brevo will silently drop mail from unverified
+   senders even if the API call reports success, so don't skip this.
+4. Deploy the function and set its secrets (the CLI must be linked to your
+   project — `supabase link`):
    ```
-   VITE_EMAILJS_PUBLIC_KEY=...
-   VITE_EMAILJS_SERVICE_ID=...
-   VITE_EMAILJS_TEMPLATE_ID=...
+   supabase functions deploy send-order-receipt
+   supabase secrets set BREVO_API_KEY=... BREVO_SENDER_EMAIL=... BREVO_SENDER_NAME="Rho Delta Chi"
    ```
-6. Place a test order and confirm the email arrives. If it doesn't, check the
-   browser console — the send is non-blocking, so a failure logs an error
-   there but does not stop the order from completing.
+5. Place a test order and confirm the email arrives. If it doesn't, check the
+   browser console (the send is non-blocking, so a failure logs an error
+   there but does not stop the order from completing) and Brevo's own
+   Transactional -> Logs page for the delivery status of that specific send.
 
 This only confirms the order was received — it is not payment confirmation
-(the fundraising chair still manually reviews the Venmo screenshot). Note:
-the free EmailJS tier caps out at 200 emails/month, and failed sends are not
-retried.
+(the fundraising chair still manually reviews the Venmo screenshot).
 
 ## Out of scope (by design)
 
 - Payment verification: Venmo screenshots are stored as proof only, never
   verified programmatically.
-- No separate backend server — the frontend talks to Supabase directly with
-  the anon key; RLS policies are the only access control.
-- Retrying failed receipt emails, and EmailJS usage/rate tracking beyond the
+- No separate backend server for the main app — the frontend talks to
+  Supabase directly with the anon key, and RLS policies are the only access
+  control; the `send-order-receipt` Edge Function is the one exception,
+  needed only to keep the Brevo API key off the client.
+- Retrying failed receipt emails, and Brevo usage/rate tracking beyond the
   free tier.
