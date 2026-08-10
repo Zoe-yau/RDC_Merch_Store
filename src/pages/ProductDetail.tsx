@@ -25,13 +25,7 @@ export const ProductDetail: React.FC = () => {
   }
 
   const activeVariant = product.colorVariants.find((v) => v.name === color) ?? product.colorVariants[0];
-  const slides = activeVariant
-    ? [
-        { src: activeVariant.front, label: 'Front' },
-        { src: activeVariant.back, label: 'Back' },
-        ...(activeVariant.detail ? [{ src: activeVariant.detail, label: 'Detail' }] : []),
-      ]
-    : [];
+  const slides = (activeVariant?.photos ?? []).map((src, i) => ({ src, label: `Photo ${i + 1}` }));
 
   const handleAdd = () => {
     addToCart(product, size, color, quantity);

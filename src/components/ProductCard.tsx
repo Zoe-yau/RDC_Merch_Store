@@ -12,9 +12,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeVariant = product.colorVariants[colorIndex] ?? product.colorVariants[0];
-  const images = [activeVariant?.front, activeVariant?.back, activeVariant?.detail].filter(
-    (src): src is string => Boolean(src)
-  );
+  const images = activeVariant?.photos ?? [];
 
   useEffect(() => {
     if (hovering && images.length > 1) {
@@ -38,7 +36,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
     setFlash(false);
   };
 
-  const thumbnail = images[slideIndex] ?? activeVariant?.front ?? '';
+  const thumbnail = images[slideIndex] ?? images[0] ?? '';
 
   return (
     <div className="group">

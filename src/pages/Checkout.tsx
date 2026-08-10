@@ -91,7 +91,7 @@ export const Checkout: React.FC = () => {
               return (
               <div key={`${item.product.id}-${item.size}-${item.color}`} className="flex gap-3 items-center">
                 <div className="w-12 h-14 shrink-0">
-                  <PlaceholderImage src={variant?.front} className="aspect-auto h-full" />
+                  <PlaceholderImage src={variant?.photos[0]} className="aspect-auto h-full" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-bm-text">{item.product.name}</p>

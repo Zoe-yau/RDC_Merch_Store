@@ -47,10 +47,13 @@ export async function getAdminSession() {
 // ============================================================================
 interface ColorVariantRow {
   name: string;
-  front: string;
-  back: string;
-  detail?: string;
+  photos?: string[];
   swatch?: string;
+  // Legacy shape from before unlimited photos — still present on rows that
+  // haven't been re-saved through the admin form since the migration.
+  front?: string;
+  back?: string;
+  detail?: string;
 }
 
 interface ProductRow {
@@ -73,7 +76,11 @@ function rowToProduct(row: ProductRow): Product {
     category: row.category,
     description: row.description,
     sizes: row.sizes,
-    colorVariants: row.color_variants.map((v) => ({ ...v, detail: v.detail ?? '' })),
+    colorVariants: row.color_variants.map((v) => ({
+      name: v.name,
+      photos: v.photos ?? [v.front, v.back, v.detail].filter((url): url is string => Boolean(url)),
+      swatch: v.swatch,
+    })),
     inStock: row.in_stock,
     sortOrder: row.sort_order,
   };
@@ -98,10 +105,10 @@ export async function reorderProducts(orderedIds: string[]): Promise<void> {
   if (failed?.error) throw failed.error;
 }
 
-// One File per color variant slot, aligned by index with the colorVariants
-// array passed alongside it. Undefined means "keep the existing image" (edit)
-// or "no image yet" (new product).
-export type VariantFiles = Array<{ front?: File; back?: File; detail?: File }>;
+// Per color variant, per photo index (aligned with that variant's `photos`
+// array). Undefined means "keep the existing image at this index" (edit) —
+// a File means "upload this and use it in place of whatever's there".
+export type VariantFiles = Array<Array<File | undefined>>;
 
 async function uploadProductImage(file: File): Promise<string> {
   const ext = file.name.split('.').pop() || 'jpg';
@@ -117,11 +124,11 @@ async function resolveVariants(
 ): Promise<ColorVariant[]> {
   return Promise.all(
     colorVariants.map(async (variant, i) => {
-      const files = variantFiles[i] ?? {};
-      const front = files.front ? await uploadProductImage(files.front) : variant.front;
-      const back = files.back ? await uploadProductImage(files.back) : variant.back;
-      const detail = files.detail ? await uploadProductImage(files.detail) : variant.detail;
-      return { name: variant.name, front, back, detail, swatch: variant.swatch || undefined };
+      const files = variantFiles[i] ?? [];
+      const photos = await Promise.all(
+        variant.photos.map((url, j) => (files[j] ? uploadProductImage(files[j] as File) : url))
+      );
+      return { name: variant.name, photos, swatch: variant.swatch || undefined };
     })
   );
 }

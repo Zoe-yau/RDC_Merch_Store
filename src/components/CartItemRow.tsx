@@ -10,7 +10,7 @@ export const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
   return (
     <div className="flex gap-4 py-5 border-b border-bm-border font-sans">
       <div className="w-20 h-24 shrink-0">
-        <PlaceholderImage src={variant?.front} className="aspect-auto h-full" />
+        <PlaceholderImage src={variant?.photos[0]} className="aspect-auto h-full" />
       </div>
       <div className="flex-1 flex flex-col justify-between">
         <div className="flex justify-between">

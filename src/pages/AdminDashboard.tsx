@@ -21,7 +21,7 @@ const emptyDetails = {
   inStock: true,
 };
 
-const emptyVariant = (): ColorVariant => ({ name: '', front: '', back: '', detail: '', swatch: '' });
+const emptyVariant = (): ColorVariant => ({ name: '', photos: [], swatch: '' });
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -33,11 +33,16 @@ export const AdminDashboard: React.FC = () => {
   const [details, setDetails] = useState(emptyDetails);
   const [colorCount, setColorCount] = useState(1);
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>([emptyVariant()]);
-  const [variantFiles, setVariantFiles] = useState<VariantFiles>([{}]);
+  const [variantFiles, setVariantFiles] = useState<VariantFiles>([[]]);
+  const [draggedPhoto, setDraggedPhoto] = useState<{ variantIndex: number; photoIndex: number } | null>(null);
+  const [dragOverPhoto, setDragOverPhoto] = useState<{ variantIndex: number; photoIndex: number } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSortOrder, setEditingSortOrder] = useState(0);
   const [saving, setSaving] = useState(false);
   const [proofUrls, setProofUrls] = useState<Record<string, string>>({});
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
+  const [dragOverProductIndex, setDragOverProductIndex] = useState<number | null>(null);
   const [openSwatchIndex, setOpenSwatchIndex] = useState<number | null>(null);
   const [swatchAnchor, setSwatchAnchor] = useState({ x: 0, y: 0 });
 
@@ -113,7 +118,7 @@ export const AdminDashboard: React.FC = () => {
 
   const resizeVariantFiles = (count: number, current: VariantFiles): VariantFiles => {
     const next = current.slice(0, count);
-    while (next.length < count) next.push({});
+    while (next.length < count) next.push([]);
     return next;
   };
 
@@ -132,15 +137,48 @@ export const AdminDashboard: React.FC = () => {
     setColorVariants((prev) => prev.map((v, i) => (i === index ? { ...v, swatch } : v)));
   };
 
-  const handleVariantPhotoChange = (index: number, slot: 'front' | 'back' | 'detail', file: File | undefined) => {
-    if (!file) return;
-    setVariantFiles((prev) => prev.map((v, i) => (i === index ? { ...v, [slot]: file } : v)));
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setColorVariants((prev) => prev.map((v, i) => (i === index ? { ...v, [slot]: dataUrl } : v)));
-    };
-    reader.readAsDataURL(file);
+  const handleAddPhotos = (index: number, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        setColorVariants((prev) =>
+          prev.map((v, i) => (i === index ? { ...v, photos: [...v.photos, dataUrl] } : v))
+        );
+        setVariantFiles((prev) => prev.map((v, i) => (i === index ? [...v, file] : v)));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemovePhoto = (index: number, photoIndex: number) => {
+    setColorVariants((prev) =>
+      prev.map((v, i) => (i === index ? { ...v, photos: v.photos.filter((_, j) => j !== photoIndex) } : v))
+    );
+    setVariantFiles((prev) => prev.map((v, i) => (i === index ? v.filter((_, j) => j !== photoIndex) : v)));
+  };
+
+  const handleReorderPhoto = (index: number, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setColorVariants((prev) =>
+      prev.map((v, i) => {
+        if (i !== index) return v;
+        const photos = [...v.photos];
+        const [moved] = photos.splice(fromIndex, 1);
+        photos.splice(toIndex, 0, moved);
+        return { ...v, photos };
+      })
+    );
+    setVariantFiles((prev) =>
+      prev.map((v, i) => {
+        if (i !== index) return v;
+        const files = [...v];
+        const [moved] = files.splice(fromIndex, 1);
+        files.splice(toIndex, 0, moved);
+        return files;
+      })
+    );
   };
 
   const resetForm = () => {
@@ -149,7 +187,7 @@ export const AdminDashboard: React.FC = () => {
     setDetails(emptyDetails);
     setColorCount(1);
     setColorVariants([emptyVariant()]);
-    setVariantFiles([{}]);
+    setVariantFiles([[]]);
     setStep('details');
   };
 
@@ -170,7 +208,7 @@ export const AdminDashboard: React.FC = () => {
         : [emptyVariant()];
     setColorCount(variants.length);
     setColorVariants(variants);
-    setVariantFiles(variants.map(() => ({})));
+    setVariantFiles(variants.map((v) => v.photos.map(() => undefined)));
     setStep('details');
   };
 
@@ -187,18 +225,23 @@ export const AdminDashboard: React.FC = () => {
         inStock: !product.inStock,
         sortOrder: product.sortOrder,
       },
-      product.colorVariants.map(() => ({}))
+      product.colorVariants.map((v) => v.photos.map(() => undefined))
     ).catch((err) => {
       console.error('Failed to update product availability', err);
       window.alert('Could not update availability: ' + (err instanceof Error ? err.message : String(err)));
     });
   };
 
-  const handleMoveProduct = (index: number, direction: -1 | 1) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= products.length) return;
+  const handleProductDrop = (targetIndex: number) => {
+    setDragOverProductIndex(null);
+    if (draggedProductIndex === null || draggedProductIndex === targetIndex) {
+      setDraggedProductIndex(null);
+      return;
+    }
     const ids = products.map((p) => p.id);
-    [ids[index], ids[targetIndex]] = [ids[targetIndex], ids[index]];
+    const [movedId] = ids.splice(draggedProductIndex, 1);
+    ids.splice(targetIndex, 0, movedId);
+    setDraggedProductIndex(null);
     reorderProducts(ids).catch((err) => {
       console.error('Failed to reorder products', err);
       window.alert('Could not reorder products: ' + (err instanceof Error ? err.message : String(err)));
@@ -304,6 +347,7 @@ export const AdminDashboard: React.FC = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-bm-muted border-b border-bm-border">
+                  <th className="py-2 pr-4"></th>
                   <th className="py-2 pr-4">Order</th>
                   <th className="py-2 pr-4">Buyer</th>
                   <th className="py-2 pr-4">Email</th>
@@ -316,49 +360,101 @@ export const AdminDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-b border-bm-border">
-                    <td className="py-3 pr-4">{order.id.slice(0, 8).toUpperCase()}</td>
-                    <td className="py-3 pr-4">{order.buyerName}</td>
-                    <td className="py-3 pr-4">{order.email}</td>
-                    <td className="py-3 pr-4">{order.phone}</td>
-                    <td className="py-3 pr-4">{order.referrer}</td>
-                    <td className="py-3 pr-4">${order.total.toFixed(2)}</td>
-                    <td className="py-3 pr-4">
-                      <button
-                        type="button"
-                        onClick={() => handleViewProof(order)}
-                        className="text-rho-teal underline"
+                {orders.map((order) => {
+                  const isExpanded = expandedOrderId === order.id;
+                  return (
+                    <React.Fragment key={order.id}>
+                      <tr
+                        className="border-b border-bm-border cursor-pointer hover:bg-bm-card/50"
+                        onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
                       >
-                        View
-                      </button>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <select
-                        value={order.status}
-                        onChange={(e) =>
-                          updateOrderStatus(order.id, e.target.value as Order['status']).catch((err) =>
-                            console.error('Failed to update order status', err)
-                          )
-                        }
-                        className={`border border-bm-border bg-bm-card px-2 py-1 text-xs uppercase ${statusColor[order.status]}`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="fulfilled">Fulfilled</option>
-                      </select>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveOrderClick(order.id)}
-                        className="text-[11px] uppercase tracking-wide text-rho-rose hover:text-rho-rose/70"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        <td className="py-3 pr-2 pl-1 text-bm-muted w-4">
+                          <span className={`inline-block transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                            ▸
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4">{order.id.slice(0, 8).toUpperCase()}</td>
+                        <td className="py-3 pr-4">{order.buyerName}</td>
+                        <td className="py-3 pr-4">{order.email}</td>
+                        <td className="py-3 pr-4">{order.phone}</td>
+                        <td className="py-3 pr-4">{order.referrer}</td>
+                        <td className="py-3 pr-4">${order.total.toFixed(2)}</td>
+                        <td className="py-3 pr-4">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewProof(order);
+                            }}
+                            className="text-rho-teal underline"
+                          >
+                            View
+                          </button>
+                        </td>
+                        <td className="py-3 pr-4" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={order.status}
+                            onChange={(e) =>
+                              updateOrderStatus(order.id, e.target.value as Order['status']).catch((err) =>
+                                console.error('Failed to update order status', err)
+                              )
+                            }
+                            className={`border border-bm-border bg-bm-card px-2 py-1 text-xs uppercase ${statusColor[order.status]}`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="fulfilled">Fulfilled</option>
+                          </select>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveOrderClick(order.id);
+                            }}
+                            className="text-[11px] uppercase tracking-wide text-rho-rose hover:text-rho-rose/70"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="border-b border-bm-border bg-bm-card/30">
+                          <td></td>
+                          <td colSpan={8} className="py-3 pr-4">
+                            {order.items.length === 0 ? (
+                              <p className="text-bm-muted text-xs">No items on this order.</p>
+                            ) : (
+                              <table className="text-xs w-full max-w-lg">
+                                <thead>
+                                  <tr className="text-left text-bm-muted uppercase tracking-wide">
+                                    <th className="py-1 pr-4 font-normal">Item</th>
+                                    <th className="py-1 pr-4 font-normal">Size</th>
+                                    <th className="py-1 pr-4 font-normal">Color</th>
+                                    <th className="py-1 pr-4 font-normal">Qty</th>
+                                    <th className="py-1 pr-4 font-normal">Unit</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {order.items.map((item, idx) => (
+                                    <tr key={`${order.id}-${idx}`}>
+                                      <td className="py-1 pr-4">{item.productName}</td>
+                                      <td className="py-1 pr-4">{item.size}</td>
+                                      <td className="py-1 pr-4">{item.color}</td>
+                                      <td className="py-1 pr-4">{item.quantity}</td>
+                                      <td className="py-1 pr-4">${item.unitPrice.toFixed(2)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
             {orders.length === 0 && <p className="text-bm-muted py-10">No orders yet.</p>}
@@ -371,29 +467,33 @@ export const AdminDashboard: React.FC = () => {
               <h2 className="text-xs uppercase tracking-wide text-bm-muted mb-4">Current Products</h2>
               <div className="space-y-3">
                 {products.map((p, i) => (
-                  <div key={p.id} className="flex items-center gap-3 border border-bm-border bg-bm-card p-3">
-                    <div className="flex flex-col shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleMoveProduct(i, -1)}
-                        disabled={i === 0}
-                        aria-label="Move up"
-                        className="text-bm-muted hover:text-bm-text disabled:opacity-25 disabled:hover:text-bm-muted leading-none px-1"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleMoveProduct(i, 1)}
-                        disabled={i === products.length - 1}
-                        aria-label="Move down"
-                        className="text-bm-muted hover:text-bm-text disabled:opacity-25 disabled:hover:text-bm-muted leading-none px-1"
-                      >
-                        ▼
-                      </button>
+                  <div
+                    key={p.id}
+                    draggable
+                    onDragStart={() => setDraggedProductIndex(i)}
+                    onDragEnter={() => draggedProductIndex !== null && setDragOverProductIndex(i)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleProductDrop(i);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedProductIndex(null);
+                      setDragOverProductIndex(null);
+                    }}
+                    className={`flex items-center gap-3 border bg-bm-card p-3 transition-colors ${
+                      dragOverProductIndex === i ? 'border-rho-teal' : 'border-bm-border'
+                    } ${draggedProductIndex === i ? 'opacity-40' : ''}`}
+                  >
+                    <div
+                      className="shrink-0 cursor-grab active:cursor-grabbing text-bm-muted hover:text-bm-text leading-none px-1 select-none"
+                      aria-hidden="true"
+                      title="Drag to reorder"
+                    >
+                      ⠿
                     </div>
                     <div className="w-12 h-14 shrink-0">
-                      <PlaceholderImage src={p.colorVariants[0]?.front} className="aspect-auto h-full" />
+                      <PlaceholderImage src={p.colorVariants[0]?.photos[0]} className="aspect-auto h-full" />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm">{p.name}</p>
@@ -504,7 +604,7 @@ export const AdminDashboard: React.FC = () => {
                       className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
                     />
                     <p className="text-[11px] text-bm-muted mt-1">
-                      Next you'll name each color and upload a front/back photo for it.
+                      Next you'll name each color and upload as many photos as you'd like for it.
                     </p>
                   </div>
 
@@ -571,49 +671,72 @@ export const AdminDashboard: React.FC = () => {
                           />
                         )}
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
-                            Front
-                          </label>
-                          <div className="w-full mb-2">
-                            <PlaceholderImage src={variant.front} label="Front" />
+                      <div>
+                        <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
+                          Photos
+                        </label>
+                        {variant.photos.length > 0 && (
+                          <div className="flex flex-wrap gap-3 mb-2">
+                            {variant.photos.map((photo, j) => {
+                              const isDragged = draggedPhoto?.variantIndex === i && draggedPhoto.photoIndex === j;
+                              const isOver = dragOverPhoto?.variantIndex === i && dragOverPhoto.photoIndex === j;
+                              return (
+                                <div
+                                  key={j}
+                                  draggable
+                                  onDragStart={() => setDraggedPhoto({ variantIndex: i, photoIndex: j })}
+                                  onDragEnter={() =>
+                                    draggedPhoto?.variantIndex === i && setDragOverPhoto({ variantIndex: i, photoIndex: j })
+                                  }
+                                  onDragOver={(e) => e.preventDefault()}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (draggedPhoto && draggedPhoto.variantIndex === i) {
+                                      handleReorderPhoto(i, draggedPhoto.photoIndex, j);
+                                    }
+                                    setDraggedPhoto(null);
+                                    setDragOverPhoto(null);
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedPhoto(null);
+                                    setDragOverPhoto(null);
+                                  }}
+                                  className={`relative w-20 shrink-0 cursor-grab active:cursor-grabbing transition-colors ${
+                                    isOver ? 'ring-2 ring-rho-teal' : ''
+                                  } ${isDragged ? 'opacity-40' : ''}`}
+                                >
+                                  <PlaceholderImage src={photo} />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemovePhoto(i, j)}
+                                    aria-label="Remove photo"
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center bg-bm-bg border border-bm-border text-bm-muted hover:text-rho-rose hover:border-rho-rose text-xs leading-none"
+                                  >
+                                    ×
+                                  </button>
+                                  {j === 0 && (
+                                    <span className="absolute bottom-0 inset-x-0 bg-bm-bg/90 text-[9px] uppercase tracking-wide text-center py-0.5">
+                                      Default
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleVariantPhotoChange(i, 'front', e.target.files?.[0])}
-                            className="w-full text-xs text-bm-muted file:mr-2 file:py-1.5 file:px-3 file:border file:border-bm-border file:bg-bm-bg file:text-[11px] file:uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
-                            Back
-                          </label>
-                          <div className="w-full mb-2">
-                            <PlaceholderImage src={variant.back} label="Back" />
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleVariantPhotoChange(i, 'back', e.target.files?.[0])}
-                            className="w-full text-xs text-bm-muted file:mr-2 file:py-1.5 file:px-3 file:border file:border-bm-border file:bg-bm-bg file:text-[11px] file:uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
-                            Detail
-                          </label>
-                          <div className="w-full mb-2">
-                            <PlaceholderImage src={variant.detail} label="Detail" />
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleVariantPhotoChange(i, 'detail', e.target.files?.[0])}
-                            className="w-full text-xs text-bm-muted file:mr-2 file:py-1.5 file:px-3 file:border file:border-bm-border file:bg-bm-bg file:text-[11px] file:uppercase"
-                          />
-                        </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => {
+                            handleAddPhotos(i, e.target.files);
+                            e.target.value = '';
+                          }}
+                          className="w-full text-xs text-bm-muted file:mr-2 file:py-1.5 file:px-3 file:border file:border-bm-border file:bg-bm-bg file:text-[11px] file:uppercase"
+                        />
+                        <p className="text-[11px] text-bm-muted mt-1">
+                          Add as many as you'd like. Drag to reorder — the first is used as the thumbnail.
+                        </p>
                       </div>
                     </div>
                   ))}

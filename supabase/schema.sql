@@ -24,7 +24,7 @@ create table if not exists public.products (
   category text not null check (category in ('Tops', 'Tanks', 'Outerwear', 'Accessories', 'Bottoms')),
   description text not null default '',
   sizes text[] not null default '{}',
-  -- color_variants: [{ "name": "Dusty Rose", "front": "<public storage URL>", "back": "<public storage URL>", "detail": "<public storage URL>" }, ...]
+  -- color_variants: [{ "name": "Dusty Rose", "photos": ["<public storage URL>", ...], "swatch": "#..." }, ...]
   color_variants jsonb not null default '[]',
   in_stock boolean not null default true,
   sort_order integer not null default 0, -- lower shows first on the shop page; admin-reorderable

@@ -1,8 +1,6 @@
 export interface ColorVariant {
   name: string;
-  front: string; // public Supabase Storage URL; empty string means no photo uploaded yet
-  back: string;
-  detail: string; // third photo (e.g. close-up/detail shot); empty string means no photo uploaded yet
+  photos: string[]; // public Supabase Storage URLs, in display order; first photo is the default/thumbnail
   swatch?: string; // hex code for the shop's color swatch; falls back to a name-derived color when unset
 }
 
