@@ -26,21 +26,21 @@ export const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
           <div className="flex items-center border border-bm-border">
             <button
               onClick={() => updateCartQuantity(item.product.id, item.size, item.color, item.quantity - 1)}
-              className="w-7 h-7 text-bm-muted hover:text-bm-text"
+              className="w-9 h-9 text-bm-muted hover:text-bm-text"
             >
               −
             </button>
             <span className="w-8 text-center text-sm">{item.quantity}</span>
             <button
               onClick={() => updateCartQuantity(item.product.id, item.size, item.color, item.quantity + 1)}
-              className="w-7 h-7 text-bm-muted hover:text-bm-text"
+              className="w-9 h-9 text-bm-muted hover:text-bm-text"
             >
               +
             </button>
           </div>
           <button
             onClick={() => removeFromCart(item.product.id, item.size, item.color)}
-            className="text-[11px] uppercase tracking-wide text-bm-muted hover:text-rho-rose"
+            className="text-[11px] uppercase tracking-wide text-bm-muted hover:text-rho-rose py-2 px-1 -mx-1"
           >
             Remove
           </button>

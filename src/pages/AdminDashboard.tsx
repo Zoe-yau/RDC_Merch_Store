@@ -1,50 +1,26 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { PlaceholderImage } from '../components/PlaceholderImage';
 import { useShop } from '../context/ShopContext';
-import type { VariantFiles } from '../lib/api';
-import type { ColorVariant, Order, Product } from '../data/mockData';
-import { colorForName } from '../lib/colorSwatch';
-import { DraggableColorPicker } from '../components/DraggableColorPicker';
+import type { Order, Product } from '../data/mockData';
 
 const TABS = ['Orders', 'Products', 'Settings'] as const;
 type Tab = (typeof TABS)[number];
 
-type Step = 'details' | 'photos';
-
-const emptyDetails = {
-  name: '',
-  price: 0,
-  category: 'Tops' as Product['category'],
-  description: '',
-  sizes: '',
-  inStock: true,
-};
-
-const emptyVariant = (): ColorVariant => ({ name: '', photos: [], swatch: '' });
-
 export const AdminDashboard: React.FC = () => {
   const {
-    orders, products, updateOrderStatus, removeOrder, addProduct, updateProduct, removeProduct, reorderProducts,
+    orders, products, updateOrderStatus, removeOrder, updateProduct, removeProduct, reorderProducts,
     isMaintenanceMode, toggleMaintenanceMode, siteSettings, updateBanner, updateInfoPage, getPaymentProofSignedUrl,
   } = useShop();
-  const [tab, setTab] = useState<Tab>('Orders');
-  const [step, setStep] = useState<Step>('details');
-  const [details, setDetails] = useState(emptyDetails);
-  const [colorCount, setColorCount] = useState(1);
-  const [colorVariants, setColorVariants] = useState<ColorVariant[]>([emptyVariant()]);
-  const [variantFiles, setVariantFiles] = useState<VariantFiles>([[]]);
-  const [draggedPhoto, setDraggedPhoto] = useState<{ variantIndex: number; photoIndex: number } | null>(null);
-  const [dragOverPhoto, setDragOverPhoto] = useState<{ variantIndex: number; photoIndex: number } | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingSortOrder, setEditingSortOrder] = useState(0);
-  const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const initialTab = (location.state as { tab?: Tab } | null)?.tab;
+  const [tab, setTab] = useState<Tab>(initialTab && TABS.includes(initialTab) ? initialTab : 'Orders');
   const [proofUrls, setProofUrls] = useState<Record<string, string>>({});
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [draggedProductIndex, setDraggedProductIndex] = useState<number | null>(null);
   const [dragOverProductIndex, setDragOverProductIndex] = useState<number | null>(null);
-  const [openSwatchIndex, setOpenSwatchIndex] = useState<number | null>(null);
-  const [swatchAnchor, setSwatchAnchor] = useState({ x: 0, y: 0 });
 
   const [bannerEnabled, setBannerEnabled] = useState(siteSettings.bannerEnabled);
   const [bannerText, setBannerText] = useState(siteSettings.bannerText);
@@ -110,108 +86,6 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const resizeVariants = (count: number, current: ColorVariant[]): ColorVariant[] => {
-    const next = current.slice(0, count);
-    while (next.length < count) next.push(emptyVariant());
-    return next;
-  };
-
-  const resizeVariantFiles = (count: number, current: VariantFiles): VariantFiles => {
-    const next = current.slice(0, count);
-    while (next.length < count) next.push([]);
-    return next;
-  };
-
-  const handleColorCountChange = (raw: string) => {
-    const count = Math.max(1, Math.min(20, Number(raw) || 1));
-    setColorCount(count);
-    setColorVariants((prev) => resizeVariants(count, prev));
-    setVariantFiles((prev) => resizeVariantFiles(count, prev));
-  };
-
-  const handleVariantNameChange = (index: number, name: string) => {
-    setColorVariants((prev) => prev.map((v, i) => (i === index ? { ...v, name } : v)));
-  };
-
-  const handleVariantSwatchChange = (index: number, swatch: string) => {
-    setColorVariants((prev) => prev.map((v, i) => (i === index ? { ...v, swatch } : v)));
-  };
-
-  const handleAddPhotos = (index: number, files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        setColorVariants((prev) =>
-          prev.map((v, i) => (i === index ? { ...v, photos: [...v.photos, dataUrl] } : v))
-        );
-        setVariantFiles((prev) => prev.map((v, i) => (i === index ? [...v, file] : v)));
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleRemovePhoto = (index: number, photoIndex: number) => {
-    setColorVariants((prev) =>
-      prev.map((v, i) => (i === index ? { ...v, photos: v.photos.filter((_, j) => j !== photoIndex) } : v))
-    );
-    setVariantFiles((prev) => prev.map((v, i) => (i === index ? v.filter((_, j) => j !== photoIndex) : v)));
-  };
-
-  const handleReorderPhoto = (index: number, fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return;
-    setColorVariants((prev) =>
-      prev.map((v, i) => {
-        if (i !== index) return v;
-        const photos = [...v.photos];
-        const [moved] = photos.splice(fromIndex, 1);
-        photos.splice(toIndex, 0, moved);
-        return { ...v, photos };
-      })
-    );
-    setVariantFiles((prev) =>
-      prev.map((v, i) => {
-        if (i !== index) return v;
-        const files = [...v];
-        const [moved] = files.splice(fromIndex, 1);
-        files.splice(toIndex, 0, moved);
-        return files;
-      })
-    );
-  };
-
-  const resetForm = () => {
-    setEditingId(null);
-    setEditingSortOrder(0);
-    setDetails(emptyDetails);
-    setColorCount(1);
-    setColorVariants([emptyVariant()]);
-    setVariantFiles([[]]);
-    setStep('details');
-  };
-
-  const handleEditClick = (product: Product) => {
-    setEditingId(product.id);
-    setEditingSortOrder(product.sortOrder);
-    setDetails({
-      name: product.name,
-      price: product.price,
-      category: product.category,
-      description: product.description,
-      sizes: product.sizes.join(', '),
-      inStock: product.inStock,
-    });
-    const variants =
-      product.colorVariants.length > 0
-        ? product.colorVariants.map((v) => ({ ...v, swatch: v.swatch ?? '' }))
-        : [emptyVariant()];
-    setColorCount(variants.length);
-    setColorVariants(variants);
-    setVariantFiles(variants.map((v) => v.photos.map(() => undefined)));
-    setStep('details');
-  };
-
   const handleToggleAvailability = (product: Product) => {
     updateProduct(
       product.id,
@@ -249,7 +123,6 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleRemoveClick = (productId: string) => {
-    if (editingId === productId) resetForm();
     removeProduct(productId).catch((err) => {
       console.error('Failed to remove product', err);
       window.alert('Could not remove product: ' + (err instanceof Error ? err.message : String(err)));
@@ -262,44 +135,6 @@ export const AdminDashboard: React.FC = () => {
       console.error('Failed to remove order', err);
       window.alert('Could not remove order: ' + (err instanceof Error ? err.message : String(err)));
     });
-  };
-
-  const handleNextStep = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!details.name.trim()) return;
-    setStep('photos');
-  };
-
-  const handleSaveProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanedVariants = colorVariants
-      .map((v) => ({ ...v, name: v.name.trim() }))
-      .filter((v) => v.name);
-    if (cleanedVariants.length === 0) return;
-
-    const productData = {
-      name: details.name,
-      price: Number(details.price),
-      category: details.category,
-      description: details.description,
-      sizes: details.sizes.split(',').map((s) => s.trim()).filter(Boolean),
-      colorVariants: cleanedVariants,
-      inStock: details.inStock,
-    };
-
-    setSaving(true);
-    try {
-      if (editingId) {
-        await updateProduct(editingId, { ...productData, sortOrder: editingSortOrder }, variantFiles);
-      } else {
-        await addProduct(productData, variantFiles);
-      }
-      resetForm();
-    } catch (err) {
-      console.error('Failed to save product', err);
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleViewProof = async (order: Order) => {
@@ -462,9 +297,18 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {tab === 'Products' && (
-          <div className="grid md:grid-cols-2 gap-10">
+          <div className="max-w-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xs uppercase tracking-wide text-bm-muted">Current Products</h2>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/dashboard/products/new')}
+                className="text-[11px] uppercase tracking-widest text-white bg-rho-teal px-4 py-2 hover:bg-rho-teal/90 transition-colors"
+              >
+                + Add Product
+              </button>
+            </div>
             <div>
-              <h2 className="text-xs uppercase tracking-wide text-bm-muted mb-4">Current Products</h2>
               <div className="space-y-3">
                 {products.map((p, i) => (
                   <div
@@ -481,12 +325,12 @@ export const AdminDashboard: React.FC = () => {
                       setDraggedProductIndex(null);
                       setDragOverProductIndex(null);
                     }}
-                    className={`flex items-center gap-3 border bg-bm-card p-3 transition-colors ${
+                    className={`flex flex-wrap items-center gap-3 border bg-bm-card p-3 transition-colors ${
                       dragOverProductIndex === i ? 'border-rho-teal' : 'border-bm-border'
                     } ${draggedProductIndex === i ? 'opacity-40' : ''}`}
                   >
                     <div
-                      className="shrink-0 cursor-grab active:cursor-grabbing text-bm-muted hover:text-bm-text leading-none px-1 select-none"
+                      className="hidden sm:block shrink-0 cursor-grab active:cursor-grabbing text-bm-muted hover:text-bm-text leading-none px-1 select-none"
                       aria-hidden="true"
                       title="Drag to reorder"
                     >
@@ -495,7 +339,7 @@ export const AdminDashboard: React.FC = () => {
                     <div className="w-12 h-14 shrink-0">
                       <PlaceholderImage src={p.colorVariants[0]?.photos[0]} className="aspect-auto h-full" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-[9rem]">
                       <p className="text-sm">{p.name}</p>
                       <p className="text-xs text-bm-muted">
                         ${p.price.toFixed(2)} · {p.category} · {p.colorVariants.length} color
@@ -505,7 +349,7 @@ export const AdminDashboard: React.FC = () => {
                         <p className="text-[10px] uppercase tracking-wide text-rho-rose mt-0.5">Unavailable</p>
                       )}
                     </div>
-                    <div className="flex gap-3 text-[11px] uppercase tracking-wide">
+                    <div className="w-full sm:w-auto flex flex-wrap gap-x-3 gap-y-1 text-[11px] uppercase tracking-wide pl-[3.75rem] sm:pl-0">
                       <button
                         onClick={() => handleToggleAvailability(p)}
                         className={p.inStock ? 'text-bm-muted hover:text-bm-text' : 'text-rho-teal hover:text-rho-teal/70'}
@@ -513,7 +357,7 @@ export const AdminDashboard: React.FC = () => {
                         {p.inStock ? 'Mark Unavailable' : 'Mark Available'}
                       </button>
                       <button
-                        onClick={() => handleEditClick(p)}
+                        onClick={() => navigate(`/admin/dashboard/products/${p.id}`)}
                         className="text-rho-teal hover:text-rho-teal/70"
                       >
                         Edit
@@ -529,234 +373,6 @@ export const AdminDashboard: React.FC = () => {
                 ))}
                 {products.length === 0 && <p className="text-bm-muted text-sm">No products yet.</p>}
               </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xs uppercase tracking-wide text-bm-muted">
-                  {editingId ? 'Edit Product' : 'Add New Product'} · Step {step === 'details' ? '1' : '2'} of 2:{' '}
-                  {step === 'details' ? 'Details' : 'Color Photos'}
-                </h2>
-                {step === 'photos' && (
-                  <button
-                    type="button"
-                    onClick={() => setStep('details')}
-                    className="text-[11px] uppercase tracking-wide text-bm-muted hover:text-bm-text"
-                  >
-                    ‹ Back
-                  </button>
-                )}
-              </div>
-
-              {step === 'details' ? (
-                <form onSubmit={handleNextStep} className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Name"
-                    value={details.name}
-                    onChange={(e) => setDetails({ ...details, name: e.target.value })}
-                    className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Price"
-                    value={details.price || ''}
-                    onChange={(e) => setDetails({ ...details, price: Number(e.target.value) })}
-                    className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                  />
-                  <select
-                    value={details.category}
-                    onChange={(e) => setDetails({ ...details, category: e.target.value as Product['category'] })}
-                    className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                  >
-                    <option value="Tops">Tops</option>
-                    <option value="Tanks">Tanks</option>
-                    <option value="Outerwear">Outerwear</option>
-                    <option value="Bottoms">Bottoms</option>
-                    <option value="Accessories">Accessories</option>
-                  </select>
-                  <textarea
-                    placeholder="Description"
-                    value={details.description}
-                    onChange={(e) => setDetails({ ...details, description: e.target.value })}
-                    className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                    rows={3}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Sizes (comma separated)"
-                    value={details.sizes}
-                    onChange={(e) => setDetails({ ...details, sizes: e.target.value })}
-                    className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                  />
-
-                  <div>
-                    <label className="text-xs uppercase tracking-wide text-bm-muted block mb-1">
-                      Number of Colors
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
-                      value={colorCount}
-                      onChange={(e) => handleColorCountChange(e.target.value)}
-                      className="w-full border border-bm-border bg-bm-card px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                    />
-                    <p className="text-[11px] text-bm-muted mt-1">
-                      Next you'll name each color and upload as many photos as you'd like for it.
-                    </p>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-rho-teal text-white py-2.5 text-xs uppercase tracking-widest hover:bg-rho-teal/90 transition-colors"
-                  >
-                    Next: Upload Photos ›
-                  </button>
-                  {editingId && (
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      className="w-full border border-bm-border text-bm-text py-2.5 text-xs uppercase tracking-widest hover:border-rho-teal transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </form>
-              ) : (
-                <form onSubmit={handleSaveProduct} className="space-y-5">
-                  {colorVariants.map((variant, i) => (
-                    <div key={i} className="border border-bm-border bg-bm-card p-4 space-y-3">
-                      <input
-                        type="text"
-                        placeholder={`Color ${i + 1} name (e.g. Dusty Rose)`}
-                        value={variant.name}
-                        onChange={(e) => handleVariantNameChange(i, e.target.value)}
-                        className="w-full border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                      />
-                      <div>
-                        <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
-                          Shop Swatch Color
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setSwatchAnchor({ x: rect.left, y: rect.bottom + 8 });
-                              setOpenSwatchIndex(i);
-                            }}
-                            style={{ backgroundColor: variant.swatch || colorForName(variant.name || 'default') }}
-                            className="w-9 h-9 border border-bm-border shrink-0 cursor-pointer"
-                            aria-label="Choose swatch color"
-                          />
-                          <input
-                            type="text"
-                            placeholder="#000000"
-                            value={variant.swatch}
-                            onChange={(e) => handleVariantSwatchChange(i, e.target.value)}
-                            className="flex-1 border border-bm-border bg-bm-bg px-3 py-2 text-sm focus:outline-none focus:border-rho-teal"
-                          />
-                        </div>
-                        <p className="text-[11px] text-bm-muted mt-1">
-                          Shown as the color dot on the shop grid. Leave blank to auto-match the color name.
-                        </p>
-                        {openSwatchIndex === i && (
-                          <DraggableColorPicker
-                            value={variant.swatch || colorForName(variant.name || 'default')}
-                            onChange={(hex) => handleVariantSwatchChange(i, hex)}
-                            onClose={() => setOpenSwatchIndex(null)}
-                            anchor={swatchAnchor}
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">
-                          Photos
-                        </label>
-                        {variant.photos.length > 0 && (
-                          <div className="flex flex-wrap gap-3 mb-2">
-                            {variant.photos.map((photo, j) => {
-                              const isDragged = draggedPhoto?.variantIndex === i && draggedPhoto.photoIndex === j;
-                              const isOver = dragOverPhoto?.variantIndex === i && dragOverPhoto.photoIndex === j;
-                              return (
-                                <div
-                                  key={j}
-                                  draggable
-                                  onDragStart={() => setDraggedPhoto({ variantIndex: i, photoIndex: j })}
-                                  onDragEnter={() =>
-                                    draggedPhoto?.variantIndex === i && setDragOverPhoto({ variantIndex: i, photoIndex: j })
-                                  }
-                                  onDragOver={(e) => e.preventDefault()}
-                                  onDrop={(e) => {
-                                    e.preventDefault();
-                                    if (draggedPhoto && draggedPhoto.variantIndex === i) {
-                                      handleReorderPhoto(i, draggedPhoto.photoIndex, j);
-                                    }
-                                    setDraggedPhoto(null);
-                                    setDragOverPhoto(null);
-                                  }}
-                                  onDragEnd={() => {
-                                    setDraggedPhoto(null);
-                                    setDragOverPhoto(null);
-                                  }}
-                                  className={`relative w-20 shrink-0 cursor-grab active:cursor-grabbing transition-colors ${
-                                    isOver ? 'ring-2 ring-rho-teal' : ''
-                                  } ${isDragged ? 'opacity-40' : ''}`}
-                                >
-                                  <PlaceholderImage src={photo} />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemovePhoto(i, j)}
-                                    aria-label="Remove photo"
-                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center bg-bm-bg border border-bm-border text-bm-muted hover:text-rho-rose hover:border-rho-rose text-xs leading-none"
-                                  >
-                                    ×
-                                  </button>
-                                  {j === 0 && (
-                                    <span className="absolute bottom-0 inset-x-0 bg-bm-bg/90 text-[9px] uppercase tracking-wide text-center py-0.5">
-                                      Default
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => {
-                            handleAddPhotos(i, e.target.files);
-                            e.target.value = '';
-                          }}
-                          className="w-full text-xs text-bm-muted file:mr-2 file:py-1.5 file:px-3 file:border file:border-bm-border file:bg-bm-bg file:text-[11px] file:uppercase"
-                        />
-                        <p className="text-[11px] text-bm-muted mt-1">
-                          Add as many as you'd like. Drag to reorder — the first is used as the thumbnail.
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="w-full bg-rho-teal text-white py-2.5 text-xs uppercase tracking-widest hover:bg-rho-teal/90 transition-colors disabled:opacity-60"
-                  >
-                    {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Add Product'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="w-full border border-bm-border text-bm-text py-2.5 text-xs uppercase tracking-widest hover:border-rho-teal transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </form>
-              )}
             </div>
           </div>
         )}

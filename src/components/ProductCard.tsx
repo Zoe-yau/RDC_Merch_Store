@@ -67,7 +67,7 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
       </Link>
 
       {product.colorVariants.length > 1 && (
-        <div className="flex gap-2 mt-2">
+        <div className="flex gap-1 mt-2 -ml-1.5">
           {product.colorVariants.map((variant, i) => (
             <button
               key={variant.name}
@@ -79,11 +79,15 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
                 setColorIndex(i);
                 setSlideIndex(0);
               }}
-              style={{ backgroundColor: variant.swatch || colorForName(variant.name) }}
-              className={`w-6 h-6 rounded-full border-2 ${
-                i === colorIndex ? 'border-rho-teal ring-1 ring-rho-teal ring-offset-1' : 'border-bm-border'
-              }`}
-            />
+              className="p-1.5 flex items-center justify-center"
+            >
+              <span
+                style={{ backgroundColor: variant.swatch || colorForName(variant.name) }}
+                className={`block w-6 h-6 rounded-full border-2 ${
+                  i === colorIndex ? 'border-rho-teal ring-1 ring-rho-teal ring-offset-1' : 'border-bm-border'
+                }`}
+              />
+            </button>
           ))}
         </div>
       )}

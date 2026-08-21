@@ -23,25 +23,27 @@ export const ImageCarousel: React.FC<{ slides: CarouselSlide[] }> = ({ slides: s
           <button
             onClick={prev}
             aria-label="Previous image"
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-bm-card/90 border border-bm-border text-bm-text hover:border-rho-teal"
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-bm-card/90 border border-bm-border text-bm-text hover:border-rho-teal"
           >
             ‹
           </button>
           <button
             onClick={next}
             aria-label="Next image"
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-bm-card/90 border border-bm-border text-bm-text hover:border-rho-teal"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-bm-card/90 border border-bm-border text-bm-text hover:border-rho-teal"
           >
             ›
           </button>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
             {slides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setIndex(i)}
                 aria-label={`Go to slide ${i + 1}`}
-                className={`w-1.5 h-1.5 rounded-full ${i === safeIndex ? 'bg-rho-teal' : 'bg-bm-border'}`}
-              />
+                className="p-2 -m-1 flex items-center justify-center"
+              >
+                <span className={`block w-1.5 h-1.5 rounded-full ${i === safeIndex ? 'bg-rho-teal' : 'bg-bm-border'}`} />
+              </button>
             ))}
           </div>
         </>

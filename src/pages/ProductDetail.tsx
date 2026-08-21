@@ -82,11 +82,11 @@ export const ProductDetail: React.FC = () => {
           <div className="mb-8">
             <p className="text-xs uppercase tracking-wide text-bm-muted mb-2">Quantity</p>
             <div className="flex items-center border border-bm-border w-fit">
-              <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-9 h-9 text-bm-muted hover:text-bm-text">
+              <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-11 h-11 text-bm-muted hover:text-bm-text">
                 −
               </button>
               <span className="w-10 text-center text-sm">{quantity}</span>
-              <button onClick={() => setQuantity((q) => q + 1)} className="w-9 h-9 text-bm-muted hover:text-bm-text">
+              <button onClick={() => setQuantity((q) => q + 1)} className="w-11 h-11 text-bm-muted hover:text-bm-text">
                 +
               </button>
             </div>

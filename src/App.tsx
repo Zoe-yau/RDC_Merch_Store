@@ -9,6 +9,7 @@ import { Checkout } from './pages/Checkout';
 import { OrderConfirmation } from './pages/OrderConfirmation';
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { AdminProductForm } from './pages/AdminProductForm';
 import { InfoPage } from './pages/InfoPage';
 
 function App() {
@@ -26,6 +27,8 @@ function App() {
             <Route path="/info" element={<InfoPage />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard/products/new" element={<AdminProductForm />} />
+            <Route path="/admin/dashboard/products/:id" element={<AdminProductForm />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </MaintenanceGuard>

@@ -22,14 +22,14 @@ export const Shop: React.FC = () => {
   return (
     <div className="min-h-screen bg-bm-bg">
       <Header />
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 font-sans">
-          <div className="flex gap-6 text-xs uppercase tracking-widest">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8 font-sans">
+          <div className="flex gap-5 sm:gap-6 text-xs uppercase tracking-widest overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
             {CATEGORIES.map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`pb-1 border-b ${
+                className={`pb-2 sm:pb-1 border-b shrink-0 whitespace-nowrap ${
                   category === c ? 'border-rho-rose text-bm-text' : 'border-transparent text-bm-muted hover:text-bm-text'
                 }`}
               >
@@ -42,11 +42,11 @@ export const Shop: React.FC = () => {
             placeholder="Search products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border border-bm-border bg-bm-card px-3 py-2 text-sm w-full sm:w-64 focus:outline-none focus:border-rho-teal"
+            className="border border-bm-border bg-bm-card px-3 py-2.5 sm:py-2 text-sm w-full sm:w-64 focus:outline-none focus:border-rho-teal"
           />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-10">
           {filtered.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
