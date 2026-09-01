@@ -7,7 +7,7 @@ import { useShop } from '../context/ShopContext';
 export const Cart: React.FC = () => {
   const { cart } = useShop();
   const navigate = useNavigate();
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-bm-bg">
@@ -26,7 +26,7 @@ export const Cart: React.FC = () => {
           <>
             <div>
               {cart.map((item) => (
-                <CartItemRow key={`${item.product.id}-${item.size}-${item.color}`} item={item} />
+                <CartItemRow key={`${item.product.id}-${item.garmentType}-${item.size}-${item.color}`} item={item} />
               ))}
             </div>
 

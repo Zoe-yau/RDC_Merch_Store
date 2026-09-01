@@ -5,13 +5,15 @@ import { PlaceholderImage } from './PlaceholderImage';
 import { colorForName } from '../lib/colorSwatch';
 
 export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
+  const [typeIndex, setTypeIndex] = useState(0);
   const [colorIndex, setColorIndex] = useState(0);
   const [hovering, setHovering] = useState(false);
   const [slideIndex, setSlideIndex] = useState(0);
   const [flash, setFlash] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const activeVariant = product.colorVariants[colorIndex] ?? product.colorVariants[0];
+  const activeType = product.garmentTypes[typeIndex] ?? product.garmentTypes[0];
+  const activeVariant = activeType?.colorVariants[colorIndex] ?? activeType?.colorVariants[0];
   const images = activeVariant?.photos ?? [];
 
   useEffect(() => {
@@ -50,9 +52,9 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             src={thumbnail}
             className={`transition-[transform,opacity] duration-500 group-hover:scale-105 ${
               flash ? 'opacity-0' : 'opacity-100'
-            } ${!product.inStock ? 'blur-sm' : ''}`}
+            } ${!activeType?.inStock ? 'blur-sm' : ''}`}
           />
-          {!product.inStock && (
+          {!activeType?.inStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-bm-bg/40">
               <span className="font-sans text-sm sm:text-base font-bold uppercase tracking-widest text-bm-text text-center px-2">
                 Unavailable
@@ -62,13 +64,35 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         </div>
         <div className="pt-3 font-sans">
           <h3 className="text-sm text-bm-text leading-snug">{product.name}</h3>
-          <p className="text-sm text-bm-muted mt-1">${product.price.toFixed(2)}</p>
+          <p className="text-sm text-bm-muted mt-1">${(activeType?.price ?? 0).toFixed(2)}</p>
         </div>
       </Link>
 
-      {product.colorVariants.length > 1 && (
+      {product.garmentTypes.length > 1 && (
+        <div className="flex gap-1.5 mt-2 flex-wrap">
+          {product.garmentTypes.map((t, i) => (
+            <button
+              key={t.type}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setTypeIndex(i);
+                setColorIndex(0);
+                setSlideIndex(0);
+              }}
+              className={`px-2 py-1 text-[10px] uppercase tracking-wide border ${
+                i === typeIndex ? 'border-rho-teal text-rho-teal' : 'border-bm-border text-bm-muted hover:border-bm-text'
+              }`}
+            >
+              {t.type}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeType && activeType.colorVariants.length > 1 && (
         <div className="flex gap-1 mt-2 -ml-1.5">
-          {product.colorVariants.map((variant, i) => (
+          {activeType.colorVariants.map((variant, i) => (
             <button
               key={variant.name}
               type="button"

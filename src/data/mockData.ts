@@ -4,21 +4,26 @@ export interface ColorVariant {
   swatch?: string; // hex code for the shop's color swatch; falls back to a name-derived color when unset
 }
 
+export interface GarmentType {
+  type: string; // e.g. 'T-Shirt', 'Tank Top', 'Hoodie', 'Jacket' — free text, admin-defined
+  price: number;
+  sizes: string[];
+  inStock: boolean;
+  colorVariants: ColorVariant[];
+}
+
 export interface Product {
   id: string;
   name: string;
-  price: number;
-  category: 'Tops' | 'Tanks' | 'Outerwear' | 'Accessories' | 'Bottoms';
   description: string;
-  sizes: string[];
-  colorVariants: ColorVariant[];
-  inStock: boolean;
+  garmentTypes: GarmentType[];
   sortOrder: number; // lower shows first on the shop page; admin-controlled
 }
 
 export interface OrderItem {
   productId: string;
   productName: string;
+  garmentType: string;
   size: string;
   color: string;
   quantity: number;

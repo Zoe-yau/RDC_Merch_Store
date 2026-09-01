@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import type { ColorVariant, Member, Order, OrderItem, Product, SiteSettings } from '../data/mockData';
+import type { ColorVariant, GarmentType, Member, Order, OrderItem, Product, SiteSettings } from '../data/mockData';
 
 // ============================================================================
 // Members / member login
@@ -56,32 +56,42 @@ interface ColorVariantRow {
   detail?: string;
 }
 
+interface GarmentTypeRow {
+  type: string;
+  price: number;
+  sizes: string[];
+  inStock: boolean;
+  colorVariants: ColorVariantRow[];
+}
+
 interface ProductRow {
   id: string;
   name: string;
-  price: number;
-  category: Product['category'];
   description: string;
-  sizes: string[];
-  color_variants: ColorVariantRow[];
-  in_stock: boolean;
+  garment_types: GarmentTypeRow[];
   sort_order: number;
+}
+
+function rowToColorVariant(v: ColorVariantRow): ColorVariant {
+  return {
+    name: v.name,
+    photos: v.photos ?? [v.front, v.back, v.detail].filter((url): url is string => Boolean(url)),
+    swatch: v.swatch,
+  };
 }
 
 function rowToProduct(row: ProductRow): Product {
   return {
     id: row.id,
     name: row.name,
-    price: Number(row.price),
-    category: row.category,
     description: row.description,
-    sizes: row.sizes,
-    colorVariants: row.color_variants.map((v) => ({
-      name: v.name,
-      photos: v.photos ?? [v.front, v.back, v.detail].filter((url): url is string => Boolean(url)),
-      swatch: v.swatch,
+    garmentTypes: row.garment_types.map((t) => ({
+      type: t.type,
+      price: Number(t.price),
+      sizes: t.sizes,
+      inStock: t.inStock,
+      colorVariants: t.colorVariants.map(rowToColorVariant),
     })),
-    inStock: row.in_stock,
     sortOrder: row.sort_order,
   };
 }
@@ -105,10 +115,11 @@ export async function reorderProducts(orderedIds: string[]): Promise<void> {
   if (failed?.error) throw failed.error;
 }
 
-// Per color variant, per photo index (aligned with that variant's `photos`
-// array). Undefined means "keep the existing image at this index" (edit) —
-// a File means "upload this and use it in place of whatever's there".
-export type VariantFiles = Array<Array<File | undefined>>;
+// [garmentTypeIndex][colorVariantIndex][photoIndex], aligned with that
+// variant's `photos` array. Undefined means "keep the existing image at this
+// index" (edit) — a File means "upload this and use it in place of whatever's
+// there".
+export type VariantFiles = Array<Array<Array<File | undefined>>>;
 
 async function uploadProductImage(file: File): Promise<string> {
   const ext = file.name.split('.').pop() || 'jpg';
@@ -120,7 +131,7 @@ async function uploadProductImage(file: File): Promise<string> {
 
 async function resolveVariants(
   colorVariants: ColorVariant[],
-  variantFiles: VariantFiles
+  variantFiles: Array<Array<File | undefined>>
 ): Promise<ColorVariant[]> {
   return Promise.all(
     colorVariants.map(async (variant, i) => {
@@ -133,16 +144,24 @@ async function resolveVariants(
   );
 }
 
+async function resolveGarmentTypes(
+  garmentTypes: GarmentType[],
+  variantFiles: VariantFiles
+): Promise<GarmentType[]> {
+  return Promise.all(
+    garmentTypes.map(async (garmentType, i) => ({
+      ...garmentType,
+      colorVariants: await resolveVariants(garmentType.colorVariants, variantFiles[i] ?? []),
+    }))
+  );
+}
+
 export async function addProduct(productData: Omit<Product, 'id'>, variantFiles: VariantFiles): Promise<void> {
-  const colorVariants = await resolveVariants(productData.colorVariants, variantFiles);
+  const garmentTypes = await resolveGarmentTypes(productData.garmentTypes, variantFiles);
   const { error } = await supabase.from('products').insert({
     name: productData.name,
-    price: productData.price,
-    category: productData.category,
     description: productData.description,
-    sizes: productData.sizes,
-    color_variants: colorVariants,
-    in_stock: productData.inStock,
+    garment_types: garmentTypes,
     sort_order: productData.sortOrder,
   });
   if (error) throw error;
@@ -153,17 +172,13 @@ export async function updateProduct(
   productData: Omit<Product, 'id'>,
   variantFiles: VariantFiles
 ): Promise<void> {
-  const colorVariants = await resolveVariants(productData.colorVariants, variantFiles);
+  const garmentTypes = await resolveGarmentTypes(productData.garmentTypes, variantFiles);
   const { error } = await supabase
     .from('products')
     .update({
       name: productData.name,
-      price: productData.price,
-      category: productData.category,
       description: productData.description,
-      sizes: productData.sizes,
-      color_variants: colorVariants,
-      in_stock: productData.inStock,
+      garment_types: garmentTypes,
       sort_order: productData.sortOrder,
     })
     .eq('id', productId);
@@ -254,7 +269,7 @@ export async function submitOrder(orderData: NewOrderData, paymentProofFile: Fil
 // order that already landed in Supabase, so errors are swallowed and logged.
 async function sendOrderReceiptEmail(orderData: NewOrderData, orderId: string): Promise<void> {
   const items = orderData.items
-    .map((item) => `${item.productName} (${item.size}, ${item.color}) x${item.quantity}`)
+    .map((item) => `${item.productName} (${item.garmentType}, ${item.size}, ${item.color}) x${item.quantity}`)
     .join('\n');
 
   try {

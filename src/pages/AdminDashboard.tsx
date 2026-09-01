@@ -87,19 +87,16 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleToggleAvailability = (product: Product) => {
+    const isAvailable = product.garmentTypes.some((t) => t.inStock);
     updateProduct(
       product.id,
       {
         name: product.name,
-        price: product.price,
-        category: product.category,
         description: product.description,
-        sizes: product.sizes,
-        colorVariants: product.colorVariants,
-        inStock: !product.inStock,
+        garmentTypes: product.garmentTypes.map((t) => ({ ...t, inStock: !isAvailable })),
         sortOrder: product.sortOrder,
       },
-      product.colorVariants.map((v) => v.photos.map(() => undefined))
+      product.garmentTypes.map((t) => t.colorVariants.map((v) => v.photos.map(() => undefined)))
     ).catch((err) => {
       console.error('Failed to update product availability', err);
       window.alert('Could not update availability: ' + (err instanceof Error ? err.message : String(err)));
@@ -310,7 +307,14 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <div>
               <div className="space-y-3">
-                {products.map((p, i) => (
+                {products.map((p, i) => {
+                  const prices = p.garmentTypes.map((t) => t.price);
+                  const minPrice = Math.min(...prices);
+                  const maxPrice = Math.max(...prices);
+                  const priceLabel = minPrice === maxPrice ? `$${minPrice.toFixed(2)}` : `$${minPrice.toFixed(2)}–$${maxPrice.toFixed(2)}`;
+                  const totalColors = p.garmentTypes.reduce((n, t) => n + t.colorVariants.length, 0);
+                  const isAvailable = p.garmentTypes.some((t) => t.inStock);
+                  return (
                   <div
                     key={p.id}
                     draggable
@@ -337,24 +341,24 @@ export const AdminDashboard: React.FC = () => {
                       ⠿
                     </div>
                     <div className="w-12 h-14 shrink-0">
-                      <PlaceholderImage src={p.colorVariants[0]?.photos[0]} className="aspect-auto h-full" />
+                      <PlaceholderImage src={p.garmentTypes[0]?.colorVariants[0]?.photos[0]} className="aspect-auto h-full" />
                     </div>
                     <div className="flex-1 min-w-[9rem]">
                       <p className="text-sm">{p.name}</p>
                       <p className="text-xs text-bm-muted">
-                        ${p.price.toFixed(2)} · {p.category} · {p.colorVariants.length} color
-                        {p.colorVariants.length === 1 ? '' : 's'}
+                        {priceLabel} · {p.garmentTypes.length} type{p.garmentTypes.length === 1 ? '' : 's'} · {totalColors} color
+                        {totalColors === 1 ? '' : 's'}
                       </p>
-                      {!p.inStock && (
+                      {!isAvailable && (
                         <p className="text-[10px] uppercase tracking-wide text-rho-rose mt-0.5">Unavailable</p>
                       )}
                     </div>
                     <div className="w-full sm:w-auto flex flex-wrap gap-x-3 gap-y-1 text-[11px] uppercase tracking-wide pl-[3.75rem] sm:pl-0">
                       <button
                         onClick={() => handleToggleAvailability(p)}
-                        className={p.inStock ? 'text-bm-muted hover:text-bm-text' : 'text-rho-teal hover:text-rho-teal/70'}
+                        className={isAvailable ? 'text-bm-muted hover:text-bm-text' : 'text-rho-teal hover:text-rho-teal/70'}
                       >
-                        {p.inStock ? 'Mark Unavailable' : 'Mark Available'}
+                        {isAvailable ? 'Mark Unavailable' : 'Mark Available'}
                       </button>
                       <button
                         onClick={() => navigate(`/admin/dashboard/products/${p.id}`)}
@@ -370,7 +374,8 @@ export const AdminDashboard: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 {products.length === 0 && <p className="text-bm-muted text-sm">No products yet.</p>}
               </div>
             </div>

@@ -20,7 +20,7 @@ export const Checkout: React.FC = () => {
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,10 +53,11 @@ export const Checkout: React.FC = () => {
           items: cart.map((item) => ({
             productId: item.product.id,
             productName: item.product.name,
+            garmentType: item.garmentType,
             size: item.size,
             color: item.color,
             quantity: item.quantity,
-            unitPrice: item.product.price,
+            unitPrice: item.unitPrice,
           })),
           total: subtotal,
         },
@@ -87,22 +88,23 @@ export const Checkout: React.FC = () => {
         <div className="border border-bm-border bg-bm-card p-5 mb-8 font-sans">
           <div className="space-y-4 mb-4">
             {cart.map((item) => {
-              const variant = item.product.colorVariants.find((v) => v.name === item.color);
+              const garmentType = item.product.garmentTypes.find((t) => t.type === item.garmentType);
+              const variant = garmentType?.colorVariants.find((v) => v.name === item.color);
               return (
-              <div key={`${item.product.id}-${item.size}-${item.color}`} className="flex gap-3 items-center">
+              <div key={`${item.product.id}-${item.garmentType}-${item.size}-${item.color}`} className="flex gap-3 items-center">
                 <div className="w-12 h-14 shrink-0">
                   <PlaceholderImage src={variant?.photos[0]} className="aspect-auto h-full" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-bm-text">{item.product.name}</p>
                   <p className="text-xs text-bm-muted mt-0.5">
-                    Size: {item.size} · Color: {item.color} · Qty: {item.quantity}
+                    Type: {item.garmentType} · Size: {item.size} · Color: {item.color} · Qty: {item.quantity}
                   </p>
                 </div>
-                <p className="text-sm text-bm-text">${(item.product.price * item.quantity).toFixed(2)}</p>
+                <p className="text-sm text-bm-text">${(item.unitPrice * item.quantity).toFixed(2)}</p>
                 <button
                   type="button"
-                  onClick={() => removeFromCart(item.product.id, item.size, item.color)}
+                  onClick={() => removeFromCart(item.product.id, item.garmentType, item.size, item.color)}
                   className="text-[11px] uppercase tracking-wide text-bm-muted hover:text-rho-rose"
                 >
                   Remove

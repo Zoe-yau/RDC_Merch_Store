@@ -5,7 +5,8 @@ import { PlaceholderImage } from './PlaceholderImage';
 
 export const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
   const { updateCartQuantity, removeFromCart } = useShop();
-  const variant = item.product.colorVariants.find((v) => v.name === item.color);
+  const garmentType = item.product.garmentTypes.find((t) => t.type === item.garmentType);
+  const variant = garmentType?.colorVariants.find((v) => v.name === item.color);
 
   return (
     <div className="flex gap-4 py-5 border-b border-bm-border font-sans">
@@ -17,29 +18,29 @@ export const CartItemRow: React.FC<{ item: CartItem }> = ({ item }) => {
           <div>
             <p className="text-sm text-bm-text">{item.product.name}</p>
             <p className="text-xs text-bm-muted mt-1">
-              Size: {item.size} · Color: {item.color}
+              Type: {item.garmentType} · Size: {item.size} · Color: {item.color}
             </p>
           </div>
-          <p className="text-sm text-bm-text">${(item.product.price * item.quantity).toFixed(2)}</p>
+          <p className="text-sm text-bm-text">${(item.unitPrice * item.quantity).toFixed(2)}</p>
         </div>
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center border border-bm-border">
             <button
-              onClick={() => updateCartQuantity(item.product.id, item.size, item.color, item.quantity - 1)}
+              onClick={() => updateCartQuantity(item.product.id, item.garmentType, item.size, item.color, item.quantity - 1)}
               className="w-9 h-9 text-bm-muted hover:text-bm-text"
             >
               −
             </button>
             <span className="w-8 text-center text-sm">{item.quantity}</span>
             <button
-              onClick={() => updateCartQuantity(item.product.id, item.size, item.color, item.quantity + 1)}
+              onClick={() => updateCartQuantity(item.product.id, item.garmentType, item.size, item.color, item.quantity + 1)}
               className="w-9 h-9 text-bm-muted hover:text-bm-text"
             >
               +
             </button>
           </div>
           <button
-            onClick={() => removeFromCart(item.product.id, item.size, item.color)}
+            onClick={() => removeFromCart(item.product.id, item.garmentType, item.size, item.color)}
             className="text-[11px] uppercase tracking-wide text-bm-muted hover:text-rho-rose py-2 px-1 -mx-1"
           >
             Remove

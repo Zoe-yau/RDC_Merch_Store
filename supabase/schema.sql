@@ -20,13 +20,12 @@ create table if not exists public.members (
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  price numeric(10, 2) not null check (price >= 0),
-  category text not null check (category in ('Tops', 'Tanks', 'Outerwear', 'Accessories', 'Bottoms')),
   description text not null default '',
-  sizes text[] not null default '{}',
-  -- color_variants: [{ "name": "Dusty Rose", "photos": ["<public storage URL>", ...], "swatch": "#..." }, ...]
-  color_variants jsonb not null default '[]',
-  in_stock boolean not null default true,
+  -- garment_types: [{ "type": "Hoodie", "price": 40, "sizes": ["S","M","L"], "inStock": true,
+  --   "colorVariants": [{ "name": "Dusty Rose", "photos": ["<public storage URL>", ...], "swatch": "#..." }, ...] }, ...]
+  -- One product is a "design" that can offer several garment types (t-shirt, tank,
+  -- hoodie, ...), each with its own price/sizes/stock/colors/photos.
+  garment_types jsonb not null default '[]',
   sort_order integer not null default 0, -- lower shows first on the shop page; admin-reorderable
   created_at timestamptz not null default now()
 );
@@ -34,9 +33,20 @@ create table if not exists public.products (
 -- If this schema was already applied before 'Tanks' was a valid category or
 -- before sort_order existed, bring an existing table up to date.
 alter table public.products add column if not exists sort_order integer not null default 0;
+alter table public.products add column if not exists garment_types jsonb not null default '[]';
+
+-- Migrating an existing table from the old single-garment shape (price,
+-- category, sizes, color_variants, in_stock all directly on the row) to the
+-- multi-garment-type "design" shape above is a breaking change — old rows
+-- won't match the new `Product` shape the app expects, so they must be
+-- re-created through the admin UI after applying this. Drop the old columns
+-- once you've done that (or immediately, if this is a fresh/test dataset):
 alter table public.products drop constraint if exists products_category_check;
-alter table public.products add constraint products_category_check
-  check (category in ('Tops', 'Tanks', 'Outerwear', 'Accessories', 'Bottoms'));
+alter table public.products drop column if exists price;
+alter table public.products drop column if exists category;
+alter table public.products drop column if exists sizes;
+alter table public.products drop column if exists color_variants;
+alter table public.products drop column if exists in_stock;
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -44,7 +54,7 @@ create table if not exists public.orders (
   referrer text not null,
   email text not null,
   phone text not null,
-  -- items: [{ "productId", "productName", "size", "color", "quantity", "unitPrice" }, ...]
+  -- items: [{ "productId", "productName", "garmentType", "size", "color", "quantity", "unitPrice" }, ...]
   items jsonb not null,
   total numeric(10, 2) not null check (total >= 0),
   -- path within the private "payment-proofs" bucket, e.g. "2026/07/29-abc123.jpg" — NOT a public URL

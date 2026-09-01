@@ -6,9 +6,11 @@ import type { Product, Order, Member, SiteSettings } from '../data/mockData';
 
 export interface CartItem {
   product: Product;
+  garmentType: string;
   size: string;
   color: string;
   quantity: number;
+  unitPrice: number;
 }
 
 interface ShopContextType {
@@ -21,9 +23,9 @@ interface ShopContextType {
   isMaintenanceMode: boolean;
   siteSettings: SiteSettings;
   productsLoading: boolean;
-  addToCart: (product: Product, size: string, color: string, quantity: number) => void;
-  removeFromCart: (productId: string, size: string, color: string) => void;
-  updateCartQuantity: (productId: string, size: string, color: string, quantity: number) => void;
+  addToCart: (product: Product, garmentType: string, size: string, color: string, quantity: number) => void;
+  removeFromCart: (productId: string, garmentType: string, size: string, color: string) => void;
+  updateCartQuantity: (productId: string, garmentType: string, size: string, color: string, quantity: number) => void;
   clearCart: () => void;
   checkMember: (firstName: string, lastName: string) => Promise<boolean>;
   adminLogin: (email: string, password: string) => Promise<boolean>;
@@ -92,29 +94,41 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => console.error('Failed to load orders', err));
   }, [isAdminLoggedIn]);
 
-  const addToCart = (product: Product, size: string, color: string, quantity: number) => {
+  const addToCart = (product: Product, garmentType: string, size: string, color: string, quantity: number) => {
     setCart((prev) => {
       const existingIndex = prev.findIndex(
-        (item) => item.product.id === product.id && item.size === size && item.color === color
+        (item) =>
+          item.product.id === product.id &&
+          item.garmentType === garmentType &&
+          item.size === size &&
+          item.color === color
       );
       if (existingIndex > -1) {
         const updated = [...prev];
         updated[existingIndex].quantity += quantity;
         return updated;
       }
-      return [...prev, { product, size, color, quantity }];
+      const unitPrice = product.garmentTypes.find((t) => t.type === garmentType)?.price ?? 0;
+      return [...prev, { product, garmentType, size, color, quantity, unitPrice }];
     });
   };
 
-  const removeFromCart = (productId: string, size: string, color: string) => {
-    setCart((prev) => prev.filter((item) => !(item.product.id === productId && item.size === size && item.color === color)));
+  const removeFromCart = (productId: string, garmentType: string, size: string, color: string) => {
+    setCart((prev) =>
+      prev.filter(
+        (item) =>
+          !(item.product.id === productId && item.garmentType === garmentType && item.size === size && item.color === color)
+      )
+    );
   };
 
-  const updateCartQuantity = (productId: string, size: string, color: string, quantity: number) => {
-    if (quantity <= 0) return removeFromCart(productId, size, color);
+  const updateCartQuantity = (productId: string, garmentType: string, size: string, color: string, quantity: number) => {
+    if (quantity <= 0) return removeFromCart(productId, garmentType, size, color);
     setCart((prev) =>
       prev.map((item) =>
-        item.product.id === productId && item.size === size && item.color === color ? { ...item, quantity } : item
+        item.product.id === productId && item.garmentType === garmentType && item.size === size && item.color === color
+          ? { ...item, quantity }
+          : item
       )
     );
   };
