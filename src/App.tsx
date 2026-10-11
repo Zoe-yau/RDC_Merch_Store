@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ShopProvider } from './context/ShopContext';
 import { MaintenanceGuard } from './components/MaintenanceGuard';
-import { Login } from './pages/Login';
 import { Shop } from './pages/Shop';
 import { ProductDetail } from './pages/ProductDetail';
 import { Cart } from './pages/Cart';
@@ -18,7 +17,7 @@ function App() {
       <BrowserRouter>
         <MaintenanceGuard>
           <Routes>
-            <Route path="/" element={<Login />} />
+            <Route path="/" element={<Shop />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
