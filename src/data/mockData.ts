@@ -62,4 +62,6 @@ export interface SiteSettings {
   infoChairPhone: string;
   infoChairEmail: string;
   infoChairEmail2: string;
+  heroImageUrl: string;
+  promiseImageUrl: string;
 }

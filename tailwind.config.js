@@ -7,6 +7,7 @@ export default {
         // Rho Delta Chi Brand Colors
         'rho-rose': '#DCA1A1',      // Soft Dusty Rose
         'rho-teal': '#006D5B',      // Rich Teal Green
+        'rho-rose-deep': '#B5666C', // Deeper rose for text on light backgrounds
 
         // Brandy Melville Vibe Neutrals
         'bm-bg': '#FBF9F6',        // Warm Linen Off-White background
@@ -16,8 +17,8 @@ export default {
         'bm-border': '#EAE7E1',    // Crisp light borders
       },
       fontFamily: {
-        serif: ['Cormorant Garamond', 'Playfair Display', 'Georgia', 'serif'],
-        sans: ['Inter', '-apple-system', 'sans-serif'],
+        serif: ['Fraunces', 'Georgia', 'serif'],
+        sans: ['DM Sans', '-apple-system', 'sans-serif'],
       },
     },
   },

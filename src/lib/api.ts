@@ -349,6 +349,8 @@ interface SiteSettingsRow {
   info_chair_phone: string;
   info_chair_email: string;
   info_chair_email_2: string;
+  hero_image_url: string;
+  promise_image_url: string;
 }
 
 function rowToSiteSettings(row: SiteSettingsRow): SiteSettings {
@@ -365,6 +367,8 @@ function rowToSiteSettings(row: SiteSettingsRow): SiteSettings {
     infoChairPhone: row.info_chair_phone,
     infoChairEmail: row.info_chair_email,
     infoChairEmail2: row.info_chair_email_2,
+    heroImageUrl: row.hero_image_url ?? '',
+    promiseImageUrl: row.promise_image_url ?? '',
   };
 }
 
@@ -382,6 +386,8 @@ const defaultSiteSettingsRow: SiteSettingsRow = {
   info_chair_phone: '',
   info_chair_email: '',
   info_chair_email_2: '',
+  hero_image_url: '',
+  promise_image_url: '',
 };
 
 export async function getSiteSettings(): Promise<SiteSettings> {
@@ -403,7 +409,13 @@ type SiteSettingsPatch = Partial<{
   info_chair_phone: string;
   info_chair_email: string;
   info_chair_email_2: string;
+  hero_image_url: string;
+  promise_image_url: string;
 }>;
+
+export async function uploadSiteImage(file: File): Promise<string> {
+  return uploadProductImage(file);
+}
 
 export async function updateSiteSettings(patch: SiteSettingsPatch): Promise<void> {
   const { data: existing, error: fetchError } = await supabase

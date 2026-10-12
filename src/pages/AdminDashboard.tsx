@@ -11,7 +11,7 @@ type Tab = (typeof TABS)[number];
 export const AdminDashboard: React.FC = () => {
   const {
     orders, products, updateOrderStatus, removeOrder, updateProduct, removeProduct, reorderProducts,
-    isMaintenanceMode, toggleMaintenanceMode, siteSettings, updateBanner, updateInfoPage, getPaymentProofSignedUrl,
+    isMaintenanceMode, toggleMaintenanceMode, siteSettings, updateBanner, updateInfoPage, updateHomeImages, getPaymentProofSignedUrl,
   } = useShop();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,6 +35,24 @@ export const AdminDashboard: React.FC = () => {
   const [infoChairEmail, setInfoChairEmail] = useState(siteSettings.infoChairEmail);
   const [infoChairEmail2, setInfoChairEmail2] = useState(siteSettings.infoChairEmail2);
   const [savingInfo, setSavingInfo] = useState(false);
+  const [heroFile, setHeroFile] = useState<File | undefined>();
+  const [promiseFile, setPromiseFile] = useState<File | undefined>();
+  const [savingImages, setSavingImages] = useState(false);
+
+  const handleSaveImages = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingImages(true);
+    try {
+      await updateHomeImages({ hero: heroFile, promise: promiseFile });
+      setHeroFile(undefined);
+      setPromiseFile(undefined);
+    } catch (err) {
+      console.error('Failed to update homepage photos', err);
+      window.alert('Could not update photos: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSavingImages(false);
+    }
+  };
 
   useEffect(() => {
     setBannerEnabled(siteSettings.bannerEnabled);
@@ -446,6 +464,51 @@ export const AdminDashboard: React.FC = () => {
               className="w-full bg-rho-teal text-white py-2.5 text-xs uppercase tracking-widest hover:bg-rho-teal/90 transition-colors disabled:opacity-60"
             >
               {savingBanner ? 'Saving…' : 'Save Banner'}
+            </button>
+          </form>
+        )}
+
+        {tab === 'Settings' && (
+          <form
+            onSubmit={handleSaveImages}
+            className="border border-bm-border bg-bm-card p-6 max-w-md mt-6 space-y-4"
+          >
+            <div>
+              <p className="text-sm text-bm-text">Homepage Photos</p>
+              <p className="text-xs text-bm-muted mt-1">
+                Replace the photo beside "Made for sisterhood" and the one in the "How it works" band.
+                Leave a field empty to keep the current photo.
+              </p>
+            </div>
+            {([
+              ['Hero photo', siteSettings.heroImageUrl, heroFile, setHeroFile],
+              ['"How it works" photo', siteSettings.promiseImageUrl, promiseFile, setPromiseFile],
+            ] as const).map(([label, current, file, setFile]) => (
+              <div key={label}>
+                <label className="text-[11px] uppercase tracking-wide text-bm-muted block mb-1">{label}</label>
+                <div className="flex items-center gap-3">
+                  {(file || current) && (
+                    <img
+                      src={file ? URL.createObjectURL(file) : current}
+                      alt=""
+                      className="w-16 h-20 object-cover border border-bm-border"
+                    />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFile(e.target.files?.[0])}
+                    className="text-xs w-full"
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              type="submit"
+              disabled={savingImages || (!heroFile && !promiseFile)}
+              className="w-full bg-rho-teal text-white py-2.5 text-xs uppercase tracking-widest hover:bg-rho-teal/90 transition-colors disabled:opacity-60"
+            >
+              {savingImages ? 'Uploading…' : 'Save Photos'}
             </button>
           </form>
         )}

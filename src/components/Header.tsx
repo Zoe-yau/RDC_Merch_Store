@@ -46,13 +46,13 @@ export const Header: React.FC = () => {
   return (
     <header className="sticky top-0 z-40">
       {siteSettings.bannerEnabled && siteSettings.bannerText && (
-        <div className="bg-rho-rose text-white text-center px-4 py-2 font-sans text-[11px] uppercase tracking-widest">
+        <div className="bg-rho-rose text-bm-text text-center px-4 py-2.5 font-sans text-[11px] font-semibold uppercase tracking-[0.2em]">
           {siteSettings.bannerText}
         </div>
       )}
       <div className="border-b border-bm-border bg-bm-bg">
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between">
-          <div className="flex items-center gap-1 flex-1">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 grid grid-cols-[1fr_auto_1fr] items-center">
+          <div className="flex items-center">
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
@@ -62,58 +62,61 @@ export const Header: React.FC = () => {
             >
               <MenuIcon open={menuOpen} />
             </button>
-            <span className="hidden sm:inline font-sans text-xs uppercase tracking-widest text-bm-muted">
-              {currentUser ? currentUser.firstName : ''}
-            </span>
+            <Link
+              to="/shop"
+              onClick={() => setMenuOpen(false)}
+              className="hidden sm:block font-serif text-2xl text-rho-rose-deep tracking-tight"
+            >
+              Rho Delta Chi<span className="text-rho-teal">.</span>
+            </Link>
           </div>
 
-          <Link to="/shop" className="text-center px-1" onClick={() => setMenuOpen(false)}>
-            <div className="font-serif text-lg sm:text-2xl tracking-wide text-bm-text">Rho Delta Chi</div>
-            <div className="font-sans text-[8px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.3em] text-rho-teal">
-              Merch Shop
-            </div>
+          <nav className="hidden sm:flex items-center gap-10 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-bm-text">
+            <Link to="/shop" className="hover:text-rho-rose-deep transition-colors">Shop</Link>
+            <Link to="/info" className="hover:text-rho-rose-deep transition-colors">Info</Link>
+            <Link
+              to={isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
+              className="hover:text-rho-rose-deep transition-colors"
+            >
+              Admin
+            </Link>
+          </nav>
+          <Link
+            to="/shop"
+            onClick={() => setMenuOpen(false)}
+            className="sm:hidden font-serif text-xl text-rho-rose-deep tracking-tight text-center"
+          >
+            Rho Delta Chi<span className="text-rho-teal">.</span>
           </Link>
 
-          <div className="flex items-center gap-1 flex-1 justify-end">
-            <nav className="hidden sm:flex items-center gap-5 font-sans text-xs uppercase tracking-wide mr-5">
-              <Link to="/info" className="text-bm-muted hover:text-bm-text transition-colors">
-                Info
-              </Link>
-              <Link
-                to={isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
-                className="text-rho-teal hover:text-rho-rose transition-colors"
+          <div className="flex items-center justify-end gap-5">
+            {currentUser && (
+              <button
+                onClick={handleLogout}
+                className="hidden sm:block font-sans text-xs font-semibold uppercase tracking-[0.18em] text-bm-muted hover:text-bm-text transition-colors"
               >
-                Admin
-              </Link>
-              {currentUser && (
-                <button onClick={handleLogout} className="text-bm-muted hover:text-bm-text transition-colors">
-                  Exit
-                </button>
-              )}
-            </nav>
+                Exit
+              </button>
+            )}
             <Link
               to="/cart"
               onClick={() => setMenuOpen(false)}
-              className="relative p-2.5 -mr-2.5 text-bm-text hover:text-rho-rose transition-colors"
+              className="flex items-center gap-2 p-2.5 -mr-2.5 sm:mr-0 sm:p-0 text-bm-text hover:text-rho-rose-deep transition-colors font-sans text-xs font-semibold uppercase tracking-[0.18em]"
             >
               <CartIcon />
-              {itemCount > 0 && (
-                <span className="absolute top-1 right-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-rho-rose text-white text-[9px]">
-                  {itemCount}
-                </span>
-              )}
+              <span className="hidden sm:inline">Bag</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rho-rose text-bm-text text-[10px]">
+                {itemCount}
+              </span>
             </Link>
           </div>
         </div>
 
         {menuOpen && (
-          <nav className="sm:hidden border-t border-bm-border bg-bm-bg px-4 py-4 flex flex-col gap-4 font-sans text-xs uppercase tracking-widest">
-            {currentUser && (
-              <span className="text-bm-muted">Signed in as {currentUser.firstName}</span>
-            )}
-            <Link to="/info" onClick={() => setMenuOpen(false)} className="text-bm-text py-1">
-              Info
-            </Link>
+          <nav className="sm:hidden border-t border-bm-border bg-bm-bg px-4 py-4 flex flex-col gap-4 font-sans text-xs font-semibold uppercase tracking-[0.18em]">
+            {currentUser && <span className="text-bm-muted">Signed in as {currentUser.firstName}</span>}
+            <Link to="/shop" onClick={() => setMenuOpen(false)} className="text-bm-text py-1">Shop</Link>
+            <Link to="/info" onClick={() => setMenuOpen(false)} className="text-bm-text py-1">Info</Link>
             <Link
               to={isAdminLoggedIn ? '/admin/dashboard' : '/admin'}
               onClick={() => setMenuOpen(false)}
@@ -122,9 +125,7 @@ export const Header: React.FC = () => {
               Admin
             </Link>
             {currentUser && (
-              <button onClick={handleLogout} className="text-bm-muted text-left py-1">
-                Exit
-              </button>
+              <button onClick={handleLogout} className="text-bm-muted text-left py-1">Exit</button>
             )}
           </nav>
         )}

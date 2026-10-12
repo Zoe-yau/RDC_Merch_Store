@@ -38,8 +38,13 @@ Setup:
    project — `supabase link`):
    ```
    supabase functions deploy send-order-receipt
-   supabase secrets set BREVO_API_KEY=... BREVO_SENDER_EMAIL=... BREVO_SENDER_NAME="Rho Delta Chi"
+   supabase secrets set BREVO_API_KEY=... BREVO_SENDER_EMAIL=... BREVO_SENDER_NAME="Rho Delta Chi" BREVO_TEMPLATE_ID=...
    ```
+   `BREVO_TEMPLATE_ID` is the number of a transactional template you create in
+   Brevo (Transactional -> Templates). The function fails with "secrets are not
+   set" if it's missing. The template must use these params:
+   `{{ params.BUYER_NAME }}`, `{{ params.ITEMS }}`, `{{ params.TOTAL }}`,
+   `{{ params.ORDER_ID }}`.
 5. Place a test order and confirm the email arrives. If it doesn't, check the
    browser console (the send is non-blocking, so a failure logs an error
    there but does not stop the order from completing) and Brevo's own

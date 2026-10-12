@@ -91,6 +91,9 @@ alter table public.site_settings add column if not exists info_chair_name text n
 alter table public.site_settings add column if not exists info_chair_phone text not null default '';
 alter table public.site_settings add column if not exists info_chair_email text not null default '';
 alter table public.site_settings add column if not exists info_chair_email_2 text not null default '';
+-- Homepage photos (hero + "How it works" band), uploaded from Admin > Settings.
+alter table public.site_settings add column if not exists hero_image_url text not null default '';
+alter table public.site_settings add column if not exists promise_image_url text not null default '';
 -- Superseded by the structured info_* columns above; drop if present from an
 -- earlier version of this schema.
 alter table public.site_settings drop column if exists info_content;

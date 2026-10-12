@@ -32,7 +32,8 @@ interface ShopContextType {
   logout: () => Promise<void>;
   toggleMaintenanceMode: () => Promise<void>;
   updateBanner: (enabled: boolean, text: string) => Promise<void>;
-  updateInfoPage: (info: Omit<SiteSettings, 'maintenanceMode' | 'bannerEnabled' | 'bannerText'>) => Promise<void>;
+  updateInfoPage: (info: Omit<SiteSettings, 'maintenanceMode' | 'bannerEnabled' | 'bannerText' | 'heroImageUrl' | 'promiseImageUrl'>) => Promise<void>;
+  updateHomeImages: (files: { hero?: File; promise?: File }) => Promise<void>;
   submitOrder: (order: NewOrderData, paymentProofFile: File) => Promise<void>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   removeOrder: (orderId: string) => Promise<void>;
@@ -64,6 +65,8 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     infoGoal: '',
     infoChairName: '',
     infoChairPhone: '',
+    heroImageUrl: '',
+    promiseImageUrl: '',
     infoChairEmail: '',
     infoChairEmail2: '',
   });
@@ -163,7 +166,20 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSiteSettings((prev) => ({ ...prev, bannerEnabled: enabled, bannerText: text }));
   };
 
-  const updateInfoPage = async (info: Omit<SiteSettings, 'maintenanceMode' | 'bannerEnabled' | 'bannerText'>) => {
+  const updateHomeImages = async (files: { hero?: File; promise?: File }) => {
+    const patch: { hero_image_url?: string; promise_image_url?: string } = {};
+    if (files.hero) patch.hero_image_url = await api.uploadSiteImage(files.hero);
+    if (files.promise) patch.promise_image_url = await api.uploadSiteImage(files.promise);
+    if (!patch.hero_image_url && !patch.promise_image_url) return;
+    await api.updateSiteSettings(patch);
+    setSiteSettings((prev) => ({
+      ...prev,
+      ...(patch.hero_image_url && { heroImageUrl: patch.hero_image_url }),
+      ...(patch.promise_image_url && { promiseImageUrl: patch.promise_image_url }),
+    }));
+  };
+
+  const updateInfoPage = async (info: Omit<SiteSettings, 'maintenanceMode' | 'bannerEnabled' | 'bannerText' | 'heroImageUrl' | 'promiseImageUrl'>) => {
     await api.updateSiteSettings({
       info_title: info.infoTitle,
       info_deadline: info.infoDeadline,
@@ -220,7 +236,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <ShopContext.Provider
       value={{
         products, orders, lastOrder, cart, currentUser, isAdminLoggedIn,
-        isMaintenanceMode: siteSettings.maintenanceMode, siteSettings, productsLoading,
+        isMaintenanceMode: siteSettings.maintenanceMode, updateHomeImages, siteSettings, productsLoading,
         addToCart, removeFromCart, updateCartQuantity, clearCart, checkMember,
         adminLogin, logout, toggleMaintenanceMode, updateBanner, updateInfoPage,
         submitOrder, updateOrderStatus, removeOrder, addProduct,
