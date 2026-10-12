@@ -10,6 +10,8 @@ export const PlaceholderImage: React.FC<{ src?: string; label?: string; classNam
       <img
         src={src}
         alt={label ?? ''}
+        loading="lazy"
+        decoding="async"
         className={`w-full aspect-[4/5] object-cover border border-bm-border ${className}`}
       />
     );

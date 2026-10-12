@@ -4,7 +4,7 @@ import { ProductCard } from '../components/ProductCard';
 import { useShop } from '../context/ShopContext';
 
 export const Shop: React.FC = () => {
-  const { products } = useShop();
+  const { products, productsLoading } = useShop();
   const [garmentType, setGarmentType] = useState<string>('All');
   const [search, setSearch] = useState('');
 
@@ -55,7 +55,9 @@ export const Shop: React.FC = () => {
         </div>
 
         {filtered.length === 0 && (
-          <p className="text-center text-bm-muted font-sans py-20">No products found.</p>
+          <p className="text-center text-bm-muted font-sans py-20">
+            {productsLoading ? 'Loading products…' : 'No products found.'}
+          </p>
         )}
       </div>
     </div>
