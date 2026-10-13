@@ -54,10 +54,31 @@ export const Shop: React.FC = () => {
           ))}
         </div>
 
-        {filtered.length === 0 && (
-          <p className="text-center text-bm-muted font-sans py-20">
-            {productsLoading ? 'Loading products…' : 'No products found.'}
-          </p>
+        {filtered.length === 0 && productsLoading && (
+          <div role="status" aria-live="polite">
+            <div className="flex items-center justify-center gap-3 text-bm-muted font-sans text-sm pb-8">
+              <span className="w-4 h-4 rounded-full border-2 border-bm-border border-t-rho-teal animate-spin" />
+              Loading products
+              <span className="inline-flex -ml-2">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className="animate-bounce" style={{ animationDelay: `${i * 150}ms` }}>.</span>
+                ))}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-10">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="animate-pulse" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div className="w-full aspect-[4/5] bg-bm-border" />
+                  <div className="h-3 bg-bm-border mt-3 w-3/4" />
+                  <div className="h-3 bg-bm-border mt-2 w-1/4" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {filtered.length === 0 && !productsLoading && (
+          <p className="text-center text-bm-muted font-sans py-20">No products found.</p>
         )}
       </div>
     </div>
