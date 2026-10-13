@@ -262,6 +262,7 @@ export const AdminDashboard: React.FC = () => {
                                 <thead>
                                   <tr className="text-left text-bm-muted uppercase tracking-wide">
                                     <th className="py-1 pr-4 font-normal">Item</th>
+                                    <th className="py-1 pr-4 font-normal">Type</th>
                                     <th className="py-1 pr-4 font-normal">Size</th>
                                     <th className="py-1 pr-4 font-normal">Color</th>
                                     <th className="py-1 pr-4 font-normal">Qty</th>
@@ -272,6 +273,7 @@ export const AdminDashboard: React.FC = () => {
                                   {order.items.map((item, idx) => (
                                     <tr key={`${order.id}-${idx}`}>
                                       <td className="py-1 pr-4">{item.productName}</td>
+                                      <td className="py-1 pr-4">{item.garmentType}</td>
                                       <td className="py-1 pr-4">{item.size}</td>
                                       <td className="py-1 pr-4">{item.color}</td>
                                       <td className="py-1 pr-4">{item.quantity}</td>
